@@ -4,7 +4,7 @@ const CONFIG = {
     API_KEY: 'AIzaSyCNTFlcVxF16w5jIGYdp5d9rBg2IHjAsCU',
     CLIENT_ID: '311551867349-ee4mroopunj16n40lt92qlfblftg2j9d.apps.googleusercontent.com',
     DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
-    SCOPES: 'https://www.googleapis.com/auth/spreadsheets',
+    SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
     WASTE_SHEET: 'Waste!A:E',
     WATER_SHEET: 'Water!A:E', 
     CLEANING_SHEET: 'Cleaning!A:E',
@@ -96,6 +96,7 @@ function checkStoredAuthState() {
         console.log('Checking stored auth state...');
         console.log('Stored token exists:', !!storedToken);
         console.log('Stored user exists:', !!storedUser);
+        console.log('Stored user value:',storedUser);
         console.log('Token expiry:', tokenExpiry);
         
         if (storedToken) {
@@ -162,12 +163,15 @@ function initializeGIS() {
                 scope: CONFIG.SCOPES,
                 callback: (tokenResponse) => {
                     console.log('Token client callback fired!', tokenResponse);
+                    console.log('Token response:', tokenResponse.email);
                     if (tokenResponse.error) {
                         console.error('Token error:', tokenResponse.error);
                         showError('Authentication failed: ' + tokenResponse.error);
                         return;
                     }
                     accessToken = tokenResponse.access_token;
+                    tokenResponse.fetchUserEmailFromGoogle
+                    
                     isSignedIn = true;
                     // Calculate token expiry (typically 1 hour from now)
                     const expiryTime = new Date(Date.now() + 3600000); // 1 hour
@@ -283,7 +287,7 @@ function updateAuthStatus() {
             authButton.onclick = function() {
                 try {
                     if (tokenClient) {
-                        tokenClient.requestAccessToken();
+                        tokenClient.requestAccessToken()
                     } else {
                         showError('Authentication not initialized. Please refresh the page.');
                     }
@@ -1328,13 +1332,19 @@ async function handleUpdate() {
         // Update the Google Sheet
         await updateGoogleSheet(currentUpdatingPerson, formattedDate);
         
+        // Log the action to the Logger sheet
+       const email = await fetchUserEmailFromGoogle();
+        console.log('Logging action for user:', email);
+
+        await logUserActionToSheet(email, `Updated waste date for ${currentUpdatingPerson} to ${formattedDate}`);
+        
         // Refresh UI
         renderRoommateCards();
         updateLatestIndicator();
         updateMostIndicator();
         
         closeUpdateModal();
-        showSuccess(` waste disposal date updated successfully!`);
+        showSuccess(`Waste disposal date updated successfully!`);
         
     } catch (error) {
         console.error('Error updating data:', error);
@@ -1475,6 +1485,58 @@ async function updateCleaningSheet(dateValue, timeValue, person, location) {
     }
 }
 
+async function logUserActionToSheet(username, action) {
+    const now = new Date();
+    const date = now.toLocaleDateString();
+    const time = now.toLocaleTimeString();
+    const values = [[username, action, date, time]];
+    const loggerSheet = 'Logger!A:D'; // Make sure you have a sheet named 'Logger' with columns: Username, Action, Date, Time
+
+    try {
+        const response = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${loggerSheet}:append?valueInputOption=USER_ENTERED&key=${CONFIG.API_KEY}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ values })
+            }
+        );
+        if (!response.ok) {
+            throw new Error(`Logger sheet append failed: ${response.status}`);
+        }
+        console.log('User action logged to Logger sheet:', { username, action, date, time });
+    } catch (error) {
+        console.error('Failed to log user action:', error);
+    }
+}
+
+// Fetch user email from Google People API
+async function fetchUserEmailFromGoogle() {
+    if (!accessToken) {
+        console.error('No access token available for fetching user email');
+        return null;
+    }
+    try {
+        const response = await fetch('https://people.googleapis.com/v1/people/me?personFields=emailAddresses', {
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to fetch user email: ${response.status}`);
+        }
+        const data = await response.json();
+        const emailObj = data.emailAddresses && data.emailAddresses[0];
+        const email = emailObj ? emailObj.value : null;
+        console.log('Fetched user email from Google People API:', email);
+        return email;
+    } catch (error) {
+        console.error('Error fetching user email:', error);
+        return null;
+    }
+}
+
 // UI utility functions
 function showLoading(show) {
     const loading = document.getElementById('loading');
@@ -1570,6 +1632,9 @@ async function handleWaterUpdate() {
         // Update the Google Sheet
         await updateWaterSheet(newTrip.date, newTrip.time, newTrip.person1, newTrip.person2);
         
+        // Log the action to the Logger sheet
+        await logUserActionToSheet(googleUser.email, `Added water trip: ${newTrip.person1} & ${newTrip.person2} on ${newTrip.date}`);
+        
         // Refresh UI
         renderWaterTrips();
         renderWaterRoommateCards();
@@ -1624,6 +1689,9 @@ async function handleCleaningUpdate() {
         
         // Update the Google Sheet
         await updateCleaningSheet(newSession.date, newSession.time, newSession.person, newSession.location);
+        
+        // Log the action to the Logger sheet
+        await logUserActionToSheet(googleUser.email, `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}`);
         
         // Refresh UI
         renderCleaningHistory();
