@@ -379,15 +379,17 @@ async function loadDataFromSheets() {
 
 async function loadWasteData() {
     try {
+        console.log('Fetching waste data from:', `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${CONFIG.WASTE_SHEET}?key=${CONFIG.API_KEY}`);
         const response = await fetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${CONFIG.WASTE_SHEET}?key=${CONFIG.API_KEY}`
         );
-        
+        console.log('Waste data response status:', response.status);
+        const text = await response.text();
+        console.log('Waste data raw response:', text);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const data = await response.json();
+        const data = JSON.parse(text);
         processWasteSheetData(data.values);
     } catch (error) {
         console.error('Error loading waste data:', error);
@@ -397,15 +399,17 @@ async function loadWasteData() {
 
 async function loadWaterData() {
     try {
+        console.log('Fetching water data from:', `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${CONFIG.WATER_SHEET}?key=${CONFIG.API_KEY}`);
         const response = await fetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${CONFIG.WATER_SHEET}?key=${CONFIG.API_KEY}`
         );
-        
+        console.log('Water data response status:', response.status);
+        const text = await response.text();
+        console.log('Water data raw response:', text);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const data = await response.json();
+        const data = JSON.parse(text);
         processWaterSheetData(data.values);
     } catch (error) {
         console.error('Error loading water data:', error);
@@ -415,15 +419,17 @@ async function loadWaterData() {
 
 async function loadCleaningData() {
     try {
+        console.log('Fetching cleaning data from:', `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${CONFIG.CLEANING_SHEET}?key=${CONFIG.API_KEY}`);
         const response = await fetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${CONFIG.CLEANING_SHEET}?key=${CONFIG.API_KEY}`
         );
-        
+        console.log('Cleaning data response status:', response.status);
+        const text = await response.text();
+        console.log('Cleaning data raw response:', text);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const data = await response.json();
+        const data = JSON.parse(text);
         processCleaningSheetData(data.values);
     } catch (error) {
         console.error('Error loading cleaning data:', error);
