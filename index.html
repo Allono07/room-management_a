@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://accounts.google.com https://www.gstatic.com; connect-src 'self' https://sheets.googleapis.com https://accounts.google.com;">
+    <title>Roommate Waste Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        // Global callback for Google Identity Services
+        window.onGapiLoad = function() {
+            console.log('Google Identity Services loaded');
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏠 Roommate Tracker</h1>
+            <p>Track waste disposal, water bottle trips, and cleaning</p>
+            <button id="altAuthBtn" onclick="tryAlternativeAuth()" style="display:none;">Alternative Sign In</button>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" data-tab="waste">🗑️ Waste Tracker</button>
+            <button class="tab-btn" data-tab="water">💧 Water Bottles</button>
+            <button class="tab-btn" data-tab="cleaning">🧹 Cleaning</button>
+        </div>
+
+        <!-- Waste Tracker Tab Content -->
+        <div class="tab-content active" id="wasteTab">
+            <div class="indicators">
+                <div class="latest-indicator">
+                    <div class="latest-badge" id="latestBadge">
+                        <span id="latestPerson">Loading...</span> took out waste last
+                    </div>
+                </div>
+                <div class="most-indicator">
+                    <div class="most-badge" id="mostBadge">
+                        <span id="mostPerson">Loading...</span> has taken out waste most often
+                    </div>
+                </div>
+            </div>
+
+            <div class="roommates-grid" id="roommatesGrid">
+                <!-- Roommate cards will be generated here -->
+            </div>
+        </div>
+
+        <!-- Water Bottle Tab Content -->
+        <div class="tab-content" id="waterTab">
+            <div class="indicators">
+                <div class="latest-indicator">
+                    <div class="latest-badge water-badge" id="waterLatestBadge">
+                        <span id="waterLatestPerson">Loading...</span> went for water bottles last
+                    </div>
+                </div>
+                <div class="most-indicator">
+                    <div class="most-badge water-badge" id="waterMostBadge">
+                        <span id="waterMostPerson">Loading...</span> has gone for water bottles most often
+                    </div>
+                </div>
+            </div>
+
+            <div class="water-roommates-grid" id="waterRoommatesGrid">
+                <!-- Individual roommate water stats will be generated here -->
+            </div>
+
+            <div class="water-trips-grid" id="waterTripsGrid">
+                <!-- Water bottle trip cards will be generated here -->
+            </div>
+
+            <div class="add-water-trip">
+                <button class="btn btn-primary" onclick="openWaterUpdateModal()">
+                    💧 Add Water Bottle Trip
+                </button>
+            </div>
+        </div>
+
+        <!-- Cleaning Tab Content -->
+        <div class="tab-content" id="cleaningTab">
+            <div class="indicators">
+                <div class="latest-indicator">
+                    <div class="latest-badge cleaning-badge" id="cleaningLatestBadge">
+                        <span id="cleaningLatestPerson">Loading...</span> cleaned last
+                    </div>
+                </div>
+                <div class="most-indicator">
+                    <div class="most-badge cleaning-badge" id="cleaningMostBadge">
+                        <span id="cleaningMostPerson">Loading...</span> has cleaned most often
+                    </div>
+                </div>
+            </div>
+
+            <div class="cleaning-roommates-grid" id="cleaningRoommatesGrid">
+                <!-- Individual roommate cleaning stats will be generated here -->
+            </div>
+
+            <div class="cleaning-history-grid" id="cleaningHistoryGrid">
+                <!-- Cleaning history cards will be generated here -->
+            </div>
+
+            <div class="add-cleaning">
+                <button class="btn btn-primary" onclick="openCleaningUpdateModal()">
+                    🧹 Add Cleaning Session
+                </button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="authButton" class="btn btn-signin">🔑 Sign In to Edit</button>
+            <button id="refreshBtn" class="btn btn-secondary">🔄 Refresh Data</button>
+        </div>
+
+        <!-- Waste Update Modal -->
+        <div id="updateModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Update Waste Disposal</h2>
+                <div class="form-group">
+                    <label for="wasteDate">Date when waste was taken out:</label>
+                    <input type="date" id="wasteDate" max="" required>
+                </div>
+                <button id="updateBtn" class="btn btn-primary">Update</button>
+            </div>
+        </div>
+
+        <!-- Water Bottle Update Modal -->
+        <div id="waterModal" class="modal">
+            <div class="modal-content">
+                <span class="close-water">&times;</span>
+                <h2>Add Water Bottle Trip</h2>
+                <div class="form-group">
+                    <label for="waterDate">Date of water bottle trip:</label>
+                    <input type="date" id="waterDate" max="" required>
+                </div>
+                <div class="form-group">
+                    <label for="person1">First Person:</label>
+                    <select id="person1" required>
+                        <option value="">Select first person</option>
+                        <option value="ALLEN">ALLEN</option>
+                        <option value="DEBIN">DEBIN</option>
+                        <option value="GREEN">GREEN</option>
+                        <option value="JITHU">JITHU</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="person2">Second Person:</label>
+                    <select id="person2" required>
+                        <option value="">Select second person</option>
+                        <option value="ALLEN">ALLEN</option>
+                        <option value="DEBIN">DEBIN</option>
+                        <option value="GREEN">GREEN</option>
+                        <option value="JITHU">JITHU</option>
+                    </select>
+                </div>
+                <button id="waterUpdateBtn" class="btn btn-primary">Add Trip</button>
+            </div>
+        </div>
+
+        <!-- Cleaning Update Modal -->
+        <div id="cleaningModal" class="modal">
+            <div class="modal-content">
+                <span class="close-cleaning">&times;</span>
+                <h2>Add Cleaning Session</h2>
+                <div class="form-group">
+                    <label for="cleaningDate">Date of cleaning:</label>
+                    <input type="date" id="cleaningDate" max="" required>
+                </div>
+                <div class="form-group">
+                    <label for="cleaningPerson">Person:</label>
+                    <select id="cleaningPerson" required>
+                        <option value="">Select person</option>
+                        <option value="ALLEN">ALLEN</option>
+                        <option value="DEBIN">DEBIN</option>
+                        <option value="GREEN">GREEN</option>
+                        <option value="JITHU">JITHU</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="cleaningLocation">Location:</label>
+                    <select id="cleaningLocation" required>
+                        <option value="">Select location</option>
+                        <option value="kitchen">Kitchen</option>
+                        <option value="hall">Hall</option>
+                    </select>
+                </div>
+                <button id="cleaningUpdateBtn" class="btn btn-primary">Add Cleaning</button>
+            </div>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading data...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
