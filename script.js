@@ -1,15 +1,15 @@
 // Configuration - Replace with your actual Google Sheets details
-const CONFIG = {
-    SPREADSHEET_ID: '1-2-3-4-5-6-7-8-9-0', // Replace with your actual Spreadsheet ID
-    API_KEY: 'YOUR_API_KEY', // Replace with your actual API Key
-    CLIENT_ID: 'YOUR_CLIENT_ID', // Replace with your actual Client ID
-    DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
-    SCOPES: 'https://www.googleapis.com/auth/spreadsheets',
-    WASTE_SHEET: 'Waste!A:E',
-    WATER_SHEET: 'Water!A:E', 
-    CLEANING_SHEET: 'Cleaning!A:E',
-    ROOMMATES: ['ALLEN', 'DEBIN', 'GREEN', 'JITHU']
-};
+// const CONFIG = {
+//     SPREADSHEET_ID: '1-2-3-4-5-6-7-8-9-0', // Replace with your actual Spreadsheet ID
+//     API_KEY: 'YOUR_API_KEY', // Replace with your actual API Key
+//     CLIENT_ID: 'YOUR_CLIENT_ID', // Replace with your actual Client ID
+//     DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
+//     SCOPES: 'https://www.googleapis.com/auth/spreadsheets',
+//     WASTE_SHEET: 'Waste!A:E',
+//     WATER_SHEET: 'Water!A:E', 
+//     CLEANING_SHEET: 'Cleaning!A:E',
+//     ROOMMATES: ['ALLEN', 'DEBIN', 'GREEN', 'JITHU']
+// };
 
 // Global state
 let roommateData = {};
