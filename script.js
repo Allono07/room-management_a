@@ -1,5 +1,3 @@
-
-
 // Configuration - Replace with your actual Google Sheets details
 const CONFIG = {
     SPREADSHEET_ID: '19w8SGE8dc4c_PxI4mBg-0nEerRvUsqOxPSE__BfK4gQ',
@@ -33,9 +31,7 @@ window.onGapiLoad = function() {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-    // Restore authentication state from localStorage
-
-    // Set max date to today for all date inputs
+    // Set max date to today for all date inputs to disable future dates
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('wasteDate').max = today;
     document.getElementById('waterDate').max = today;
@@ -1338,7 +1334,7 @@ async function handleUpdate() {
         updateMostIndicator();
         
         closeUpdateModal();
-        showSuccess(`${currentUpdatingPerson}'s waste disposal date updated successfully!`);
+        showSuccess(` waste disposal date updated successfully!`);
         
     } catch (error) {
         console.error('Error updating data:', error);
