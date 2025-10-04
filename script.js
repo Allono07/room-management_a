@@ -1,8 +1,10 @@
+require('dotenv').config();
+
 // Configuration - Replace with your actual Google Sheets details
 const CONFIG = {
-    SPREADSHEET_ID: '19w8SGE8dc4c_PxI4mBg-0nEerRvUsqOxPSE__BfK4gQ', // Replace with your Google Sheets ID
-    API_KEY: 'AIzaSyCNTFlcVxF16w5jIGYdp5d9rBg2IHjAsCU', // Replace with your Google API key
-    CLIENT_ID: '311551867349-ee4mroopunj16n40lt92qlfblftg2j9d.apps.googleusercontent.com', // OAuth2 Client ID
+    SPREADSHEET_ID: process.env.SPREADSHEET_ID,
+    API_KEY: process.env.API_KEY,
+    CLIENT_ID: process.env.CLIENT_ID,
     DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
     SCOPES: 'https://www.googleapis.com/auth/spreadsheets',
     WASTE_SHEET: 'Waste!A:E',
