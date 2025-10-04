@@ -198,6 +198,23 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+      // Dynamically load env vars from serverless function
+      window.env = {};
+      fetch('/api/env')
+        .then(res => res.json())
+        .then(env => {
+          window.env = env;
+          // Now load config.js and script.js
+          const configScript = document.createElement('script');
+          configScript.src = 'config.js';
+          configScript.onload = function() {
+            const mainScript = document.createElement('script');
+            mainScript.src = 'script.js';
+            document.body.appendChild(mainScript);
+          };
+          document.body.appendChild(configScript);
+        });
+    </script>
 </body>
 </html>
