@@ -205,6 +205,7 @@
         .then(res => res.json())
         .then(env => {
           window.env = env;
+          console.log('Environment variables loaded:', env);
           // Now load config.js and script.js
           const configScript = document.createElement('script');
           configScript.src = 'config.js';
