@@ -1,4 +1,4 @@
-require('dotenv').config();
+
 
 // Configuration - Replace with your actual Google Sheets details
 const CONFIG = {
