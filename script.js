@@ -286,8 +286,10 @@ function updateAuthStatus() {
             authButton.textContent = '🔑 Sign In to Edit';
             authButton.onclick = function() {
                 try {
+                    // Trigger Google Identity Services sign-in flow
+                    google.accounts.id.prompt();
                     if (tokenClient) {
-                        tokenClient.requestAccessToken()
+                        tokenClient.requestAccessToken();
                     } else {
                         showError('Authentication not initialized. Please refresh the page.');
                     }
