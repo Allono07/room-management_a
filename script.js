@@ -4,11 +4,18 @@ const CONFIG = {
     API_KEY: 'AIzaSyCNTFlcVxF16w5jIGYdp5d9rBg2IHjAsCU',
     CLIENT_ID: '311551867349-ee4mroopunj16n40lt92qlfblftg2j9d.apps.googleusercontent.com',
     DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
-    SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
+    SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid https://www.googleapis.com/auth/contacts.readonly',
     WASTE_SHEET: 'Waste!A:E',
     WATER_SHEET: 'Water!A:E', 
     CLEANING_SHEET: 'Cleaning!A:E',
-    ROOMMATES: ['ALLEN', 'DEBIN', 'GREEN', 'JITHU']
+    ROOMMATES: ['ALLEN', 'DEBIN', 'GREEN', 'JITHU'],
+    // Email configuration
+    EMAIL: {
+        SERVICE_ID: 'service_z7ejjbn',
+        TEMPLATE_ID: 'template_n885wa8',
+        PUBLIC_KEY: 'noyxT_Bu6ph2s9LL8', // Replace with your public key from EmailJS dashboard
+        TO_EMAILS: ['jithuv01@gmail.com', 'allen.thomson@netcorecloud.com','greeenvr@gmail.com','rtdebin@gmail.com']
+    }
 };
 
 // Global state
@@ -29,8 +36,127 @@ window.onGapiLoad = function() {
     console.log('Google Identity Services loaded successfully');
 };
 
+// Email utility functions
+async function sendEmail(templateParams) {
+    try {
+        // Check if EmailJS is defined
+        if (typeof emailjs === 'undefined') {
+            throw new Error('EmailJS is not loaded. Please check if the EmailJS script is included in your HTML.');
+        }
+        
+        // Send email to all recipients
+        const sendPromises = CONFIG.EMAIL.TO_EMAILS.map(async (recipientEmail) => {
+            const params = {
+                ...templateParams,
+                email: recipientEmail
+            };
+            
+            console.log(`Sending email to ${recipientEmail} with params:`, params);
+            
+            return emailjs.send(
+                CONFIG.EMAIL.SERVICE_ID,
+                CONFIG.EMAIL.TEMPLATE_ID,
+                params
+            );
+        });
+        
+        // Wait for all emails to be sent
+        const responses = await Promise.all(sendPromises);
+        
+        console.log('All emails sent successfully:', responses);
+        return true;
+    } catch (error) {
+        console.error('Failed to send email:', error);
+        if (error.text) {
+            showError(`Failed to send email: ${error.text}`);
+        } else {
+            showError('Failed to send email notification. Please try again.');
+        }
+        return false;
+    }
+}
+
+async function sendWasteUpdateEmail(person, date) {
+    // Debug log to check authentication state
+    console.log('Current auth state:', {
+        googleUser: googleUser,
+        isSignedIn: isSignedIn,
+        accessToken: accessToken ? 'Present' : 'None'
+    });
+
+    let editorEmail = 'Unknown editor';
+    if (googleUser && googleUser.email) {
+        editorEmail = googleUser.email;
+    } else {
+        // Try to get email from localStorage
+        const storedUser = localStorage.getItem('google_user');
+        if (storedUser) {
+            const userObject = JSON.parse(storedUser);
+            editorEmail = userObject.email || 'Unknown editor';
+        }
+        console.log('Retrieved stored user:', storedUser);
+    }
+
+    console.log('Editor email being used:', editorEmail);
+
+    const templateParams = {
+        title: 'Waste Disposal Update',
+        date: date,
+        action_type: 'waste disposal update',
+        message: `${person} has taken out the waste`,
+        icon: '🗑️',
+        bg_color: '#ffebee',
+        editor_email: editorEmail,
+        update_info: `This update was made by: ${editorEmail}`
+    };
+   return await sendEmail(templateParams);
+}
+
+async function sendWaterUpdateEmail(person1, person2, date) {
+    const editorEmail = googleUser ? googleUser.email : 'Unknown editor';
+    const templateParams = {
+        title: 'Water Bottle Trip Update',
+        date: date,
+        action_type: 'water bottle trip update',
+        message: `${person1} and ${person2} went for water bottles`,
+        icon: '💧',
+        bg_color: '#e3f2fd',
+        editor_email: editorEmail,
+        update_info: `This update was made by: ${editorEmail}`
+    };
+    return await sendEmail(templateParams);
+}
+
+async function sendCleaningUpdateEmail(person, location, date) {
+    const editorEmail = googleUser ? googleUser.email : 'Unknown editor';
+    const templateParams = {
+        title: 'Cleaning Update',
+        date: date,
+        action_type: 'cleaning update',
+        message: `${person} has cleaned the ${location}`,
+        icon: '🧹',
+        bg_color: '#f5f5f5',
+        editor_email: editorEmail,
+        update_info: `This update was made by: ${editorEmail}`
+    };
+    return await sendEmail(templateParams);
+}
+
+// Initialize EmailJS
+function initializeEmailJS() {
+    try {
+        emailjs.init(CONFIG.EMAIL.PUBLIC_KEY);
+        console.log('EmailJS initialized successfully');
+    } catch (error) {
+        console.error('Failed to initialize EmailJS:', error);
+    }
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize EmailJS first
+    initializeEmailJS();
+    
     // Set max date to today for all date inputs to disable future dates
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('wasteDate').max = today;
@@ -161,30 +287,35 @@ function initializeGIS() {
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: CONFIG.CLIENT_ID,
                 scope: CONFIG.SCOPES,
-                callback: (tokenResponse) => {
+                callback: async (tokenResponse) => {
                     console.log('Token client callback fired!', tokenResponse);
-                    console.log('Token response:', tokenResponse.email);
                     if (tokenResponse.error) {
                         console.error('Token error:', tokenResponse.error);
                         showError('Authentication failed: ' + tokenResponse.error);
                         return;
                     }
-                    accessToken = tokenResponse.access_token;
-                    tokenResponse.fetchUserEmailFromGoogle
                     
+                    accessToken = tokenResponse.access_token;
                     isSignedIn = true;
+                    
                     // Calculate token expiry (typically 1 hour from now)
                     const expiryTime = new Date(Date.now() + 3600000); // 1 hour
-                    // If googleUser is not set, try to restore from localStorage
-                    if (!googleUser) {
-                        const storedUser = localStorage.getItem('google_user');
-                        console.log('Stored user exists after token acquisition:', storedUser);
-                        if (storedUser) {
-                            googleUser = JSON.parse(storedUser);
-                            console.log('Restored user from storage after token acquisition:', googleUser);
-
+                    
+                    // If googleUser is not set or doesn't have email, try to fetch it
+                    if (!googleUser || !googleUser.email) {
+                        console.log('Email not found in googleUser, attempting to fetch...');
+                        const email = await fetchUserEmailFromGoogle();
+                        if (email) {
+                            if (!googleUser) {
+                                googleUser = { email: email };
+                            } else {
+                                googleUser.email = email;
+                            }
+                            console.log('Updated googleUser with email:', googleUser);
+                            localStorage.setItem('google_user', JSON.stringify(googleUser));
+                        } else {
+                            console.warn('Could not fetch user email');
                         }
-                        console.log('googleUser after token acquisition:', googleUser);
                     }
                     // Store austhentication state with expiry
                     localStorage.setItem('google_access_token', accessToken);
@@ -215,22 +346,52 @@ function initializeGIS() {
     initGIS();
 }
 
-function handleCredentialResponse(response) {
-    // Decode JWT to get user info
-    console.log('Credential response received:', response);
-    googleToken = response.credential;
-    const base64Url = googleToken.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
-    googleUser = JSON.parse(jsonPayload);
-    // Store user info immediately after decoding
-    localStorage.setItem('google_user', JSON.stringify(googleUser));
-    console.log('User info decoded and stored:', googleUser);
-    // Request access token ONLY after user sign-in
-    if (tokenClient) {
-        tokenClient.requestAccessToken();
+async function handleCredentialResponse(response) {
+    try {
+        console.log('Credential response received:', response);
+        googleToken = response.credential;
+        
+        // Decode the JWT token to get user info
+        const base64Url = googleToken.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        
+        const decodedToken = JSON.parse(jsonPayload);
+        console.log('Decoded token payload:', decodedToken);
+        
+        // Extract email and other info from the token
+        googleUser = {
+            email: decodedToken.email,
+            name: decodedToken.name,
+            picture: decodedToken.picture
+        };
+        
+        console.log('Extracted user info from token:', googleUser);
+        
+        if (googleUser.email) {
+            console.log('Email found in token:', googleUser.email);
+            localStorage.setItem('google_user', JSON.stringify(googleUser));
+        } else {
+            console.log('No email found in token, will try to fetch it after getting access token');
+        }
+        
+        // Request access token ONLY after user sign-in
+        if (tokenClient) {
+            console.log('Requesting access token...');
+            tokenClient.requestAccessToken();
+        } else {
+            console.error('Token client not initialized');
+        }
+    } catch (error) {
+        console.error('Error in handleCredentialResponse:', error);
+        showError('Failed to get user information. Please try signing in again.');
+        // Log the complete error for debugging
+        console.log('Complete error object:', {
+            message: error.message,
+            stack: error.stack
+        });
     }
 }
 
@@ -1345,6 +1506,12 @@ async function handleUpdate() {
         // Update the Google Sheet
         await updateGoogleSheet(currentUpdatingPerson, formattedDate);
         
+        // Send email notification
+        const emailSent = await sendWasteUpdateEmail(currentUpdatingPerson, formattedDate);
+        if (!emailSent) {
+            console.warn('Failed to send email notification');
+        }
+        
         // Log the action to the Logger sheet
         const deviceDetails = getDeviceDetails();
         console.log('Logging action for device:', deviceDetails);
@@ -1532,19 +1699,48 @@ async function fetchUserEmailFromGoogle() {
         return null;
     }
     try {
-        const response = await fetch('https://people.googleapis.com/v1/people/me?personFields=emailAddresses', {
-            headers: { Authorization: `Bearer ${accessToken}` }
+        // Using People API since it's allowed in our CSP
+        const peopleResponse = await fetch('https://people.googleapis.com/v1/people/me?personFields=emailAddresses,names', {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json'
+            }
         });
-        if (!response.ok) {
-            throw new Error(`Failed to fetch user email: ${response.status}`);
+        
+        console.log('People API Response status:', peopleResponse.status);
+        
+        if (!peopleResponse.ok) {
+            throw new Error(`Failed to fetch user info: ${peopleResponse.status}`);
         }
-        const data = await response.json();
-        const emailObj = data.emailAddresses && data.emailAddresses[0];
-        const email = emailObj ? emailObj.value : null;
-        console.log('Fetched user email from Google People API:', email);
-        return email;
+        
+        const peopleData = await peopleResponse.json();
+        console.log('People API Response:', peopleData);
+        
+        // Try to get email from emailAddresses
+        if (peopleData.emailAddresses && peopleData.emailAddresses.length > 0) {
+            const email = peopleData.emailAddresses[0].value;
+            console.log('Successfully fetched email from People API:', email);
+            return email;
+        }
+        
+        // If no email found, try to extract from names (some accounts store email there)
+        if (peopleData.names && peopleData.names.length > 0) {
+            const metadata = peopleData.names[0].metadata;
+            if (metadata && metadata.source && metadata.source.id) {
+                console.log('Found potential email in names metadata:', metadata.source.id);
+                return metadata.source.id;
+            }
+        }
+        
+        throw new Error('No email found in People API response');
     } catch (error) {
         console.error('Error fetching user email:', error);
+        // Log the complete error for debugging
+        console.log('Complete error object:', {
+            message: error.message,
+            stack: error.stack,
+            response: error.response
+        });
         return null;
     }
 }
@@ -1643,7 +1839,14 @@ async function handleWaterUpdate() {
         
         // Update the Google Sheet
         await updateWaterSheet(newTrip.date, newTrip.time, newTrip.person1, newTrip.person2);
-                const deviceDetails = getDeviceDetails();
+
+        // Send email notification
+        const emailSent = await sendWaterUpdateEmail(newTrip.person1, newTrip.person2, newTrip.date);
+        if (!emailSent) {
+            console.warn('Failed to send email notification');
+        }
+        
+        const deviceDetails = getDeviceDetails();
         console.log('Logging action for device:', deviceDetails);
         // Log the action to the Logger sheet
         await logUserActionToSheet(deviceDetails, `Added water trip: ${newTrip.person1} & ${newTrip.person2} on ${newTrip.date}`);
@@ -1702,7 +1905,14 @@ async function handleCleaningUpdate() {
         
         // Update the Google Sheet
         await updateCleaningSheet(newSession.date, newSession.time, newSession.person, newSession.location);
-                const deviceDetails = getDeviceDetails();
+
+        // Send email notification
+        const emailSent = await sendCleaningUpdateEmail(newSession.person, newSession.location, newSession.date);
+        if (!emailSent) {
+            console.warn('Failed to send email notification');
+        }
+        
+        const deviceDetails = getDeviceDetails();
         console.log('Logging action for device:', deviceDetails);
         // Log the action to the Logger sheet
         await logUserActionToSheet(deviceDetails, `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}`);
