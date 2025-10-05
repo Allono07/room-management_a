@@ -1643,9 +1643,10 @@ async function handleWaterUpdate() {
         
         // Update the Google Sheet
         await updateWaterSheet(newTrip.date, newTrip.time, newTrip.person1, newTrip.person2);
-        
+                const deviceDetails = getDeviceDetails();
+        console.log('Logging action for device:', deviceDetails);
         // Log the action to the Logger sheet
-        await logUserActionToSheet('unknown', `Added water trip: ${newTrip.person1} & ${newTrip.person2} on ${newTrip.date}`);
+        await logUserActionToSheet(deviceDetails, `Added water trip: ${newTrip.person1} & ${newTrip.person2} on ${newTrip.date}`);
         
         // Refresh UI
         renderWaterTrips();
@@ -1701,9 +1702,10 @@ async function handleCleaningUpdate() {
         
         // Update the Google Sheet
         await updateCleaningSheet(newSession.date, newSession.time, newSession.person, newSession.location);
-        
+                const deviceDetails = getDeviceDetails();
+        console.log('Logging action for device:', deviceDetails);
         // Log the action to the Logger sheet
-        await logUserActionToSheet('unknown', `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}`);
+        await logUserActionToSheet(deviceDetails, `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}`);
         
         // Refresh UI
         renderCleaningHistory();
