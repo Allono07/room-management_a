@@ -1307,6 +1307,17 @@ function setupEventListeners() {
     });
 }
 
+function getDeviceDetails() {
+    const ua = navigator.userAgent;
+    let device = 'Unknown Device';
+    if (/android/i.test(ua)) device = 'Android';
+    else if (/iPad|iPhone|iPod/.test(ua)) device = 'iOS';
+    else if (/Windows/i.test(ua)) device = 'Windows';
+    else if (/Macintosh/i.test(ua)) device = 'Mac';
+    else if (/Linux/i.test(ua)) device = 'Linux';
+    return `${device} | ${ua}`;
+}
+
 async function handleUpdate() {
     const dateInput = document.getElementById('wasteDate');
     
@@ -1335,10 +1346,9 @@ async function handleUpdate() {
         await updateGoogleSheet(currentUpdatingPerson, formattedDate);
         
         // Log the action to the Logger sheet
-       const email = await fetchUserEmailFromGoogle();
-        console.log('Logging action for user:', email);
-
-        await logUserActionToSheet(email, `Updated waste date for ${currentUpdatingPerson} to ${formattedDate}`);
+        const deviceDetails = getDeviceDetails();
+        console.log('Logging action for device:', deviceDetails);
+        await logUserActionToSheet(deviceDetails, `Updated waste date for ${currentUpdatingPerson} to ${formattedDate}`);
         
         // Refresh UI
         renderRoommateCards();
@@ -1635,7 +1645,7 @@ async function handleWaterUpdate() {
         await updateWaterSheet(newTrip.date, newTrip.time, newTrip.person1, newTrip.person2);
         
         // Log the action to the Logger sheet
-        await logUserActionToSheet(googleUser.email, `Added water trip: ${newTrip.person1} & ${newTrip.person2} on ${newTrip.date}`);
+        await logUserActionToSheet('unknown', `Added water trip: ${newTrip.person1} & ${newTrip.person2} on ${newTrip.date}`);
         
         // Refresh UI
         renderWaterTrips();
@@ -1693,7 +1703,7 @@ async function handleCleaningUpdate() {
         await updateCleaningSheet(newSession.date, newSession.time, newSession.person, newSession.location);
         
         // Log the action to the Logger sheet
-        await logUserActionToSheet(googleUser.email, `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}`);
+        await logUserActionToSheet('unknown', `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}`);
         
         // Refresh UI
         renderCleaningHistory();
