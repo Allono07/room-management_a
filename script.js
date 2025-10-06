@@ -20,7 +20,7 @@ const CONFIG = {
         SERVICE_ID: 'service_z7ejjbn',
         TEMPLATE_ID: 'template_n885wa8',
         PUBLIC_KEY: 'noyxT_Bu6ph2s9LL8', // Replace with your public key from EmailJS dashboard
-        TO_EMAILS: ['jithuv01@gmail.com', 'allen.thomson@netcorecloud.com','greeenvr@gmail.com','rtdebin@gmail.com']
+        TO_EMAILS: ['jithuv01@gmail.com', 'allen.thomson@mscsa.christuniversity.in','greeenvr@gmail.com','rtdebin@gmail.com']
     }
 };
 
