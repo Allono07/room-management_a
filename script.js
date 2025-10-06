@@ -118,7 +118,7 @@ async function sendWasteUpdateEmail(person, date) {
         editor_email: editorEmail,
         update_info: `This update was made by: ${editorEmail}`
     };
-   //return await sendEmail(templateParams);
+   return await sendEmail(templateParams);
 }
 
 async function sendWaterUpdateEmail(person1, person2, date) {
