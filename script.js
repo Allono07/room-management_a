@@ -4,7 +4,7 @@ const CONFIG = {
     API_KEY: 'AIzaSyCNTFlcVxF16w5jIGYdp5d9rBg2IHjAsCU',
     CLIENT_ID: '311551867349-ee4mroopunj16n40lt92qlfblftg2j9d.apps.googleusercontent.com',
     DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
-    SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid https://www.googleapis.com/auth/contacts.readonly',
+    SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
     WASTE_SHEET: 'Waste!A:E',
     WATER_SHEET: 'Water!A:E', 
     CLEANING_SHEET: 'Cleaning!A:E',
