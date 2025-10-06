@@ -8,6 +8,12 @@ const CONFIG = {
     WASTE_SHEET: 'Waste!A:E',
     WATER_SHEET: 'Water!A:E', 
     CLEANING_SHEET: 'Cleaning!A:E',
+    REWARDS_SHEET: 'Rewards!A:F',
+    REWARDS: {
+        WASTE_POINTS: 5,
+        WATER_POINTS: 15,
+        CLEANING_POINTS: 10
+    },
     ROOMMATES: ['ALLEN', 'DEBIN', 'GREEN', 'JITHU'],
     // Email configuration
     EMAIL: {
@@ -22,6 +28,9 @@ const CONFIG = {
 let roommateData = {};
 let waterTripData = [];
 let cleaningData = [];
+let rewardsData = {};
+let currentMonthRankings = [];
+let lastMonthWinner = null;
 let currentUpdatingPerson = null;
 let isSignedIn = false;
 
@@ -109,7 +118,7 @@ async function sendWasteUpdateEmail(person, date) {
         editor_email: editorEmail,
         update_info: `This update was made by: ${editorEmail}`
     };
-   return await sendEmail(templateParams);
+   //return await sendEmail(templateParams);
 }
 
 async function sendWaterUpdateEmail(person1, person2, date) {
@@ -177,12 +186,162 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });
 
+// Reward System Functions
+async function updateRewardsSheet(person, activity, points, date) {
+    if (!isSignedIn) {
+        throw new Error('Please sign in to update rewards');
+    }
+
+    try {
+        const authToken = getAuthToken();
+        if (!authToken) {
+            throw new Error('No authentication token available');
+        }
+
+        const rowData = [date, person, activity, points, new Date().toISOString(), googleUser?.email || 'Unknown'];
+        
+        const response = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${CONFIG.REWARDS_SHEET}:append?valueInputOption=USER_ENTERED&access_token=${authToken}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    values: [rowData]
+                })
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Failed to update rewards sheet: ${response.status}`);
+        }
+
+        console.log(`Successfully added reward points for ${person}`);
+        await loadRewardsData();
+    } catch (error) {
+        console.error('Error updating rewards:', error);
+        throw error;
+    }
+}
+
+async function loadRewardsData() {
+    try {
+        const response = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${CONFIG.REWARDS_SHEET}?key=${CONFIG.API_KEY}`
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(data)
+        processRewardsData(data.values || []);
+        updateRewardsDisplay();
+    } catch (error) {
+        console.error('Error loading rewards data:', error);
+    }
+}
+
+function processRewardsData(values) {
+    rewardsData = {};
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+    // Skip header row if it exists
+    const dataRows = values.length > 1 ? values.slice(1) : values;
+
+    dataRows.forEach(row => {
+        if (row.length < 4) return;
+
+        // Parse date in DD/MM/YYYY format
+        const [day, month, year] = row[0].split('/').map(num => parseInt(num, 10));
+        const date = new Date(year, month - 1, day); // month is 0-based in JS
+        const person = row[1];
+        const points = parseInt(row[3]) || 0;
+
+        // Initialize person's data if not exists
+        if (!rewardsData[person]) {
+            rewardsData[person] = {
+                currentMonth: 0,
+                lastMonth: 0,
+                total: 0
+            };
+        }
+
+        // Add points to appropriate month
+        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+            rewardsData[person].currentMonth += points;
+        } else if (date.getMonth() === lastMonth && date.getFullYear() === lastMonthYear) {
+            rewardsData[person].lastMonth += points;
+        }
+        rewardsData[person].total += points;
+    });
+
+    // Calculate rankings and winner
+    calculateRankings();
+}
+
+function calculateRankings() {
+    // Current month rankings
+    currentMonthRankings = Object.entries(rewardsData)
+        .map(([name, data]) => ({
+            name,
+            points: data.currentMonth
+        }))
+        .sort((a, b) => b.points - a.points);
+
+    // Last month's winner
+    lastMonthWinner = Object.entries(rewardsData)
+        .reduce((winner, [name, data]) => {
+            if (!winner || data.lastMonth > winner.points) {
+                return { name, points: data.lastMonth };
+            }
+            return winner;
+        }, null);
+}
+
+function updateRewardsDisplay() {
+    // Update current rankings
+    const rankingsList = document.getElementById('rankingsList');
+    rankingsList.innerHTML = currentMonthRankings
+        .map((person, index) => `
+            <div class="ranking-item ${index === 0 ? 'top-rank' : ''}">
+                <span class="rank">#${index + 1}</span>
+                <span class="name">${person.name}</span>
+                <span class="points">${person.points} pts</span>
+            </div>
+        `)
+        .join('');
+
+    // Update last month's winner
+    const winnerDisplay = document.getElementById('lastMonthWinner');
+    if (lastMonthWinner && lastMonthWinner.points > 0) {
+        winnerDisplay.innerHTML = `
+            <div class="winner">
+                <span class="winner-name">${lastMonthWinner.name}</span>
+                <span class="winner-points">${lastMonthWinner.points} pts</span>
+            </div>
+        `;
+    } else {
+        winnerDisplay.innerHTML = '<p>No winner yet</p>';
+    }
+}
+
 async function initializeApp() {
     showLoading(true);
     
     try {
         // Load data from sheets
-        await loadDataFromSheets();
+        await Promise.all([
+            loadDataFromSheets(),
+            loadRewardsData()
+        ]);
         
         // Render all components
         renderRoommateCards();
@@ -196,6 +355,7 @@ async function initializeApp() {
         updateWaterMostIndicator();
         updateCleaningLatestIndicator();
         updateCleaningMostIndicator();
+        updateRewardsDisplay();
         setupEventListeners();
         
         // Update auth status
@@ -1502,6 +1662,9 @@ async function handleUpdate() {
         personData.dates.push(formattedDate);
         personData.count++;
         personData.lastDate = formattedDate;
+
+        // Add reward points
+        await updateRewardsSheet(currentUpdatingPerson, 'waste', CONFIG.REWARDS.WASTE_POINTS, formattedDate);
         
         // Update the Google Sheet
         await updateGoogleSheet(currentUpdatingPerson, formattedDate);
@@ -1833,6 +1996,12 @@ async function handleWaterUpdate() {
             person2: person2Select.value,
             id: Date.now() // Simple ID generation
         };
+
+        // Add reward points for both participants
+        await Promise.all([
+            updateRewardsSheet(person1Select.value, 'water', CONFIG.REWARDS.WATER_POINTS, formattedDate),
+            updateRewardsSheet(person2Select.value, 'water', CONFIG.REWARDS.WATER_POINTS, formattedDate)
+        ]);
         
         // Add to water trip data
         waterTripData.push(newTrip);
@@ -1899,6 +2068,9 @@ async function handleCleaningUpdate() {
             location: locationSelect.value,
             id: Date.now() // Simple ID generation
         };
+
+        // Add reward points
+        await updateRewardsSheet(personSelect.value, 'cleaning', CONFIG.REWARDS.CLEANING_POINTS, formattedDate);
         
         // Add to cleaning data
         cleaningData.push(newSession);

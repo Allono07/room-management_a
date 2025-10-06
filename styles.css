@@ -927,6 +927,158 @@ header p {
     }
 }
 
+.rewards-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.rewards-section h2 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.rewards-section h3 {
+    color: #34495e;
+    margin: 1rem 0;
+    font-size: 1.2rem;
+}
+
+.rankings-list {
+    max-width: 400px;
+    margin: 1rem auto;
+}
+
+.ranking-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    background: rgb(255, 255, 255);
+    color: black;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease;
+}
+
+.ranking-item:hover {
+    transform: translateY(-2px);
+}
+
+.top-rank {
+    background: linear-gradient(135deg, #ffd700 0%, #fff8dc 100%);
+    border: 1px solid #ffd700;
+}
+
+.rank {
+    font-weight: bold;
+    color: #2c3e50;
+    min-width: 40px;
+}
+
+.name {
+    flex: 1;
+    margin: 0 1rem;
+    font-weight: 500;
+}
+
+.points {
+    color: #27ae60;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.last-month-winner {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #ffd700 0%, #fff8dc 100%);
+    border-radius: 12px;
+    text-align: center;
+    color: black;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}
+
+.winner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.winner-name {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.winner-points {
+    color: #27ae60;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.current-month-reward {
+    background: linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin: 1.5rem 0;
+    text-align: center;
+    box-shadow: 0 3px 15px rgba(255, 107, 107, 0.2);
+}
+
+.reward-label {
+    font-size: 1.1rem;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.reward-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #2c3e50;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.reward-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}c
+
+.points-info {
+    background: rgb(199, 139, 28);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-top: 1.5rem;
+    color: black;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.points-info ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.points-info li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.1rem;
+    color: black;
+}
+
+.points-info li:last-child {
+    border-bottom: none;
+}
+
 /* Error states */
 .error {
     background: #f8d7da;
