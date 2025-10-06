@@ -189,6 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Reward System Functions
 async function updateRewardsSheet(person, activity, points, date) {
     if (!isSignedIn) {
+        window.alert("Please sign in to update");
         throw new Error('Please sign in to update rewards');
     }
 
@@ -1490,6 +1491,13 @@ function formatDateForSheet(dateInput) {
 
 // Modal functions
 function openUpdateModal(roommateName) {
+    if (!isSignedIn) {
+        showError('Please sign in to update waste disposal records');
+         window.alert("Please sign in to update");
+      //  document.getElementById('authButton').click();
+        return;
+    }
+    
     currentUpdatingPerson = roommateName;
     const modal = document.getElementById('updateModal');
     const dateInput = document.getElementById('wasteDate');
@@ -1513,6 +1521,13 @@ function closeUpdateModal() {
 
 // Water Bottle Modal Functions
 function openWaterUpdateModal() {
+    if (!isSignedIn) {
+        showError('Please sign in to record water bottle trips');
+         window.alert("Please sign in to update");
+        // document.getElementById('authButton').click();
+        return;
+    }
+    
     const modal = document.getElementById('waterModal');
     const dateInput = document.getElementById('waterDate');
     
@@ -1536,6 +1551,13 @@ function closeWaterModal() {
 
 // Cleaning Modal Functions
 function openCleaningUpdateModal() {
+    if (!isSignedIn) {
+        showError('Please sign in to record cleaning sessions');
+         window.alert("Please sign in to update");
+        // document.getElementById('authButton').click();
+        return;
+    }
+    
     const modal = document.getElementById('cleaningModal');
     const dateInput = document.getElementById('cleaningDate');
     
@@ -1698,6 +1720,7 @@ async function handleUpdate() {
 
 async function updateGoogleSheet(roommateName, dateValue) {
     if (!isSignedIn) {
+        window.alert("Please sign in to update");
         throw new Error('Please sign in to add entries');
     }
     
@@ -1753,6 +1776,7 @@ async function updateGoogleSheet(roommateName, dateValue) {
 
 async function updateWaterSheet(dateValue, timeValue, person1, person2) {
     if (!isSignedIn) {
+        window.alert("Please sign in to update");
         throw new Error('Please sign in to add entries');
     }
     
@@ -1791,6 +1815,7 @@ async function updateWaterSheet(dateValue, timeValue, person1, person2) {
 
 async function updateCleaningSheet(dateValue, timeValue, person, location) {
     if (!isSignedIn) {
+        window.alert("Please sign in to update");
         throw new Error('Please sign in to add entries');
     }
     
@@ -2107,6 +2132,9 @@ async function handleCleaningUpdate() {
 }
 
 // Make functions global for onclick handlers
+
+
 window.openUpdateModal = openUpdateModal;
 window.openWaterUpdateModal = openWaterUpdateModal;
 window.openCleaningUpdateModal = openCleaningUpdateModal;
+
