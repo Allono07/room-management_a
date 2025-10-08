@@ -4,7 +4,7 @@ const CONFIG = {
     API_KEY: 'AIzaSyCNTFlcVxF16w5jIGYdp5d9rBg2IHjAsCU',
     CLIENT_ID: '311551867349-ee4mroopunj16n40lt92qlfblftg2j9d.apps.googleusercontent.com',
     DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
-    SCOPES: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
+    SCOPES: 'openid email profile',
     WASTE_SHEET: 'Waste!A:E',
     WATER_SHEET: 'Water!A:E', 
     CLEANING_SHEET: 'Cleaning!A:E',
@@ -1953,55 +1953,36 @@ async function logUserActionToSheet(username, action) {
     }
 }
 
-// Fetch user email from Google People API
+// Fetch user email from Google UserInfo API
 async function fetchUserEmailFromGoogle() {
     if (!accessToken) {
         console.error('No access token available for fetching user email');
         return null;
     }
     try {
-        // Using People API since it's allowed in our CSP
-        const peopleResponse = await fetch('https://people.googleapis.com/v1/people/me?personFields=emailAddresses,names', {
+        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
             headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Accept': 'application/json'
+                'Authorization': `Bearer ${accessToken}`
             }
         });
         
-        console.log('People API Response status:', peopleResponse.status);
+        console.log('UserInfo API Response status:', userInfoResponse.status);
         
-        if (!peopleResponse.ok) {
-            throw new Error(`Failed to fetch user info: ${peopleResponse.status}`);
+        if (!userInfoResponse.ok) {
+            throw new Error(`Failed to fetch user info: ${userInfoResponse.status}`);
         }
         
-        const peopleData = await peopleResponse.json();
-        console.log('People API Response:', peopleData);
+        const userInfo = await userInfoResponse.json();
+        console.log('UserInfo API Response:', userInfo);
         
-        // Try to get email from emailAddresses
-        if (peopleData.emailAddresses && peopleData.emailAddresses.length > 0) {
-            const email = peopleData.emailAddresses[0].value;
-            console.log('Successfully fetched email from People API:', email);
-            return email;
+        if (userInfo.email) {
+            console.log('Successfully fetched email from UserInfo API:', userInfo.email);
+            return userInfo.email;
         }
         
-        // If no email found, try to extract from names (some accounts store email there)
-        if (peopleData.names && peopleData.names.length > 0) {
-            const metadata = peopleData.names[0].metadata;
-            if (metadata && metadata.source && metadata.source.id) {
-                console.log('Found potential email in names metadata:', metadata.source.id);
-                return metadata.source.id;
-            }
-        }
-        
-        throw new Error('No email found in People API response');
+        throw new Error('No email found in UserInfo API response');
     } catch (error) {
         console.error('Error fetching user email:', error);
-        // Log the complete error for debugging
-        console.log('Complete error object:', {
-            message: error.message,
-            stack: error.stack,
-            response: error.response
-        });
         return null;
     }
 }
