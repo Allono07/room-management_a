@@ -173,16 +173,17 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('cleaningDate').max = today;
     
     // Check for stored authentication state first
-
-
     checkStoredAuthState();
-
         
     // Check for OAuth2 redirect
     handleOAuthRedirect();
     
+    // Initialize Google Identity Services
+    setTimeout(() => {
+        initializeGIS();
+    }, 1000); // Give time for the script to load
+    
     // Initialize the app
-
     initializeApp();
 });
 
@@ -415,144 +416,226 @@ function checkStoredAuthState() {
 }
 
 function initializeGIS() {
-    // Wait for Google Identity Services to load
-    const initGIS = () => {
-        if (typeof google === 'undefined' || !google.accounts) {
-            console.log('Google Identity Services not ready, retrying...');
-            setTimeout(initGIS, 100);
-            return;
-        }
-        
+    let retryAttempts = 0;
+    const maxRetries = 50; // 5 seconds maximum wait
+    const retryInterval = 100; // 100ms between retries
+    
+    function initializeGoogleAuth() {
         try {
             console.log('Initializing Google Identity Services...');
-            console.log('Google object:', google);
             
+            // Initialize the Google Identity Services
             google.accounts.id.initialize({
                 client_id: CONFIG.CLIENT_ID,
-                callback: (response) => {
-                    console.log('Credential response received:', response);
-                    handleCredentialResponse(response);
-                }
+                callback: handleCredentialResponse,
+                auto_select: false
             });
             
-            google.accounts.id.renderButton(
-                document.getElementById('g_id_signin'),
-                { 
-                    theme: 'outline', 
-                    size: 'large',
-                    width: '250px'
-                }
-            );
+            // Render the Google Sign-In button
+            const signInElement = document.getElementById('g_id_signin');
+            if (signInElement) {
+                google.accounts.id.renderButton(
+                    signInElement,
+                    { 
+                        type: 'standard',
+                        theme: 'outline',
+                        size: 'large',
+                        width: 250,
+                        logo_alignment: 'center'
+                    }
+                );
+                console.log('Google Sign-In button rendered successfully');
+            } else {
+                console.error('g_id_signin element not found');
+            }
             
             // Initialize OAuth2 token client
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: CONFIG.CLIENT_ID,
                 scope: CONFIG.SCOPES,
-                callback: async (tokenResponse) => {
-                    console.log('Token client callback fired!', tokenResponse);
-                    if (tokenResponse.error) {
-                        console.error('Token error:', tokenResponse.error);
-                        showError('Authentication failed: ' + tokenResponse.error);
-                        return;
-                    }
-                    
-                    accessToken = tokenResponse.access_token;
-                    isSignedIn = true;
-                    
-                    // Calculate token expiry (typically 1 hour from now)
-                    const expiryTime = new Date(Date.now() + 3600000); // 1 hour
-                    
-                    // If googleUser is not set or doesn't have email, try to fetch it
-                    if (!googleUser || !googleUser.email) {
-                        console.log('Email not found in googleUser, attempting to fetch...');
-                        const email = await fetchUserEmailFromGoogle();
-                        if (email) {
-                            if (!googleUser) {
-                                googleUser = { email: email };
-                            } else {
-                                googleUser.email = email;
-                            }
-                            console.log('Updated googleUser with email:', googleUser);
-                            localStorage.setItem('google_user', JSON.stringify(googleUser));
-                        } else {
-                            console.warn('Could not fetch user email');
-                        }
-                    }
-                    // Store austhentication state with expiry
-                    localStorage.setItem('google_access_token', accessToken);
-                    localStorage.setItem('google_token_expiry', expiryTime.toISOString());
-                    if (googleUser) {
-                        localStorage.setItem('google_user', JSON.stringify(googleUser));
-                        console.log('Stored googleUser after token acquisition:', googleUser);
-                    }
-                    updateAuthStatus();
-                    showSuccess('Access token received! You can now update sheets.');
-                    console.log('Access token received successfully');
-                },
-                error_callback: (error) => {
-                    console.error('OAuth2 error:', error);
-                    showError('Authentication failed. Please try again.');
-                }
+                callback: handleTokenResponse,
+                prompt: 'consent'
             });
             
             console.log('Google Identity Services initialized successfully');
-            console.log('Token client initialized:', !!tokenClient);
+            return true;
+            
         } catch (error) {
             console.error('Error initializing Google Identity Services:', error);
-            showError('Failed to initialize Google authentication. Please refresh the page.');
+            return false;
         }
-    };
+    }
     
-    // Start initialization
-    initGIS();
+    async function handleTokenResponse(tokenResponse) {
+        console.log('Token client callback fired!', tokenResponse);
+        
+        if (tokenResponse.error) {
+            console.error('Token error:', tokenResponse.error);
+            showError('Authentication failed: ' + tokenResponse.error);
+            showLoading(false);
+            return;
+        }
+        
+        accessToken = tokenResponse.access_token;
+        isSignedIn = true;
+        
+        // Calculate token expiry (1 hour from now)
+        const expiryTime = new Date(Date.now() + 3600000);
+        
+        try {
+            // Try to fetch user email if needed
+            if (!googleUser?.email) {
+                console.log('Email not found in googleUser, attempting to fetch...');
+                const email = await fetchUserEmailFromGoogle();
+                if (email) {
+                    googleUser = googleUser || {};
+                    googleUser.email = email;
+                    console.log('Updated googleUser with email:', googleUser);
+                    localStorage.setItem('google_user', JSON.stringify(googleUser));
+                }
+            }
+            
+            // Store authentication state
+            localStorage.setItem('google_access_token', accessToken);
+            localStorage.setItem('google_token_expiry', expiryTime.toISOString());
+            if (googleUser) {
+                localStorage.setItem('google_user', JSON.stringify(googleUser));
+                console.log('Stored googleUser after token acquisition:', googleUser);
+            }
+            
+            updateAuthStatus();
+            showSuccess(`Successfully signed in${googleUser?.email ? ` (${googleUser.email})` : ''}!`);
+            console.log('Access token received successfully');
+        } catch (error) {
+            console.error('Error in token response:', error);
+        } finally {
+            showLoading(false);
+        }
+    }
+    
+    function attemptInitialization() {
+        if (typeof google === 'undefined' || !google.accounts) {
+            retryAttempts++;
+            console.log(`Google Identity Services not ready, retrying... (${retryAttempts}/${maxRetries})`);
+            
+            if (retryAttempts < maxRetries) {
+                setTimeout(attemptInitialization, retryInterval);
+            } else {
+                console.error('Failed to load Google Identity Services after maximum attempts');
+                showError('Failed to initialize Google authentication. Please refresh the page.');
+            }
+            return;
+        }
+        
+        const initialized = initializeGoogleAuth();
+        if (!initialized) {
+            retryAttempts++;
+            if (retryAttempts < maxRetries) {
+                console.log(`Initialization failed, retrying... (${retryAttempts}/${maxRetries})`);
+                setTimeout(attemptInitialization, retryInterval);
+            } else {
+                console.error('Failed to initialize Google authentication after maximum attempts');
+                showError('Failed to initialize Google authentication. Please refresh the page.');
+            }
+        }
+    }
+    
+    // Start initialization process
+    attemptInitialization();
 }
+
+function handleSignInClick() {
+    try {
+        if (!google?.accounts?.id) {
+            showError('Authentication not initialized. Please refresh the page.');
+            return;
+        }
+
+        showLoading(true);
+        
+        // Trigger Google One Tap or fall back to button click
+        google.accounts.id.prompt((notification) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                console.log('Google One Tap not displayed:', notification);
+                // Fall back to the Google Sign-In button click
+                const signInButton = document.getElementById('g_id_signin');
+                if (signInButton) {
+                    const button = signInButton.querySelector('div[role="button"]');
+                    if (button) {
+                        button.click();
+                    } else {
+                        showError('Could not find Google Sign-In button');
+                        showLoading(false);
+                    }
+                } else {
+                    showError('Could not initiate sign-in. Please try again.');
+                    showLoading(false);
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error initiating sign-in:', error);
+        showError('Failed to start sign-in process. Please try again.');
+        showLoading(false);
+    }
+}
+
 
 async function handleCredentialResponse(response) {
     try {
-        console.log('Credential response received:', response);
+        if (!response?.credential) {
+            throw new Error('Invalid credential response');
+        }
+
+        console.log('Credential response received');
         googleToken = response.credential;
         
-        // Decode the JWT token to get user info
-        const base64Url = googleToken.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        
-        const decodedToken = JSON.parse(jsonPayload);
-        console.log('Decoded token payload:', decodedToken);
-        
-        // Extract email and other info from the token
-        googleUser = {
-            email: decodedToken.email,
-            name: decodedToken.name,
-            picture: decodedToken.picture
-        };
-        
-        console.log('Extracted user info from token:', googleUser);
-        
-        if (googleUser.email) {
-            console.log('Email found in token:', googleUser.email);
-            localStorage.setItem('google_user', JSON.stringify(googleUser));
-        } else {
-            console.log('No email found in token, will try to fetch it after getting access token');
+        try {
+            // Parse the JWT token
+            const [header, payload] = googleToken.split('.');
+            if (!header || !payload) {
+                throw new Error('Invalid JWT format');
+            }
+            
+            const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+            const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
+            const jsonPayload = decodeURIComponent(atob(padded).split('').map(c => 
+                '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+            ).join(''));
+            
+            const decodedToken = JSON.parse(jsonPayload);
+            console.log('Decoded token:', decodedToken);
+            
+            // Update user info immediately
+            googleUser = {
+                email: decodedToken.email || null,
+                name: decodedToken.name || null,
+                picture: decodedToken.picture || null
+            };
+
+            if (googleUser.email) {
+                localStorage.setItem('google_user', JSON.stringify(googleUser));
+                console.log('User info stored:', googleUser);
+                
+                // After getting the user info, proceed with token request
+                console.log('Requesting access token...');
+                if (tokenClient) {
+                    tokenClient.requestAccessToken({ prompt: 'consent' });
+                } else {
+                    console.error('Token client not initialized');
+                }
+            } else {
+                console.error('No email found in token');
+            }
+            
+        } catch (parseError) {
+            console.error('Error parsing JWT:', parseError);
+            googleUser = null;
         }
-        
-        // Request access token ONLY after user sign-in
-        if (tokenClient) {
-            console.log('Requesting access token...');
-            tokenClient.requestAccessToken();
-        } else {
-            console.error('Token client not initialized');
-        }
+
     } catch (error) {
         console.error('Error in handleCredentialResponse:', error);
-        showError('Failed to get user information. Please try signing in again.');
-        // Log the complete error for debugging
-        console.log('Complete error object:', {
-            message: error.message,
-            stack: error.stack
-        });
+        showError('Failed to process sign-in. Please try again.');
     }
 }
 
@@ -598,33 +681,23 @@ function checkAuthStatus() {
 
 function updateAuthStatus() {
     const authButton = document.getElementById('authButton');
+    const googleSignInButton = document.getElementById('g_id_signin');
+
     if (authButton) {
         if (isSignedIn) {
             authButton.textContent = '🚪 Sign Out';
             authButton.onclick = signOut;
+            authButton.style.display = 'block';
             authButton.classList.remove('btn-signin');
             authButton.classList.add('btn-signout');
+            if (googleSignInButton) {
+                googleSignInButton.style.display = 'none';
+            }
         } else {
-            authButton.textContent = '🔑 Sign In to Edit';
-            authButton.onclick = function() {
-                try {
-                    // Trigger Google Identity Services sign-in flow
-                    google.accounts.id.prompt();
-                    if (tokenClient) {
-                        tokenClient.requestAccessToken();
-                    } else {
-                        showError('Authentication not initialized. Please refresh the page.');
-                    }
-                } catch (error) {
-                    console.error('Error requesting access token:', error);
-                    showError('Popup blocked. Try the alternative sign-in method.');
-                    // Show alternative auth button
-                    const altBtn = document.getElementById('altAuthBtn');
-                    if (altBtn) altBtn.style.display = 'inline-block';
-                }
-            };
-            authButton.classList.remove('btn-signout');
-            authButton.classList.add('btn-signin');
+            authButton.style.display = 'none';
+            if (googleSignInButton) {
+                googleSignInButton.style.display = 'block';
+            }
         }
     }
 }

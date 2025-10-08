@@ -6,9 +6,9 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #e0e0e0 0%, #050406 100%);
     min-height: 100vh;
-    color: #333;
+    color: #000000;
 }
 
 .container {
@@ -90,7 +90,7 @@ header p {
 }
 
 .latest-badge {
-    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+    background: linear-gradient(45deg, #939393, #8d8d8d);
     color: white;
     padding: 15px 30px;
     border-radius: 50px;
@@ -257,6 +257,12 @@ header p {
     box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
 }
 
+.auth-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .controls {
     text-align: center;
 }
@@ -304,6 +310,8 @@ header p {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
 }
+
+
 
 .btn-signout {
     background: linear-gradient(45deg, #dc3545, #e74c3c);
@@ -1022,7 +1030,7 @@ header p {
 }
 
 .current-month-reward {
-    background: linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%);
+    background: linear-gradient(135deg, #000000 0%, #FFE66D 100%);
     padding: 1.5rem;
     border-radius: 12px;
     margin: 1.5rem 0;
@@ -1048,10 +1056,10 @@ header p {
 .reward-icon {
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
-}c
+}
 
 .points-info {
-    background: rgb(199, 139, 28);
+    background: rgb(243, 243, 243);
     padding: 1.5rem;
     border-radius: 12px;
     margin-top: 1.5rem;
