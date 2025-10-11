@@ -398,6 +398,28 @@ header p {
     border-color: #667eea;
 }
 
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.3s ease;
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.form-group textarea::placeholder {
+    color: #999;
+    font-style: italic;
+}
+
 /* Loading Styles */
 .loading {
     position: fixed;
@@ -625,6 +647,16 @@ header p {
     font-size: 0.9rem;
 }
 
+.water-trip-description {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f0f8ff;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #333;
+    border-left: 3px solid #3498db;
+}
+
 .add-water-trip {
     text-align: center;
     margin-top: 30px;
@@ -841,6 +873,16 @@ header p {
     text-align: center;
     color: #666;
     font-size: 0.9rem;
+}
+
+.cleaning-history-description {
+    margin-top: 10px;
+    padding: 10px;
+    background: #fff8e1;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #333;
+    border-left: 3px solid #e67e22;
 }
 
 .add-cleaning {

@@ -5,9 +5,9 @@ const CONFIG = {
     CLIENT_ID: '311551867349-ee4mroopunj16n40lt92qlfblftg2j9d.apps.googleusercontent.com',
     DISCOVERY_DOC: 'https://sheets.googleapis.com/$discovery/rest?version=v4',
     SCOPES: 'https://www.googleapis.com/auth/spreadsheets openid email profile',
-    WASTE_SHEET: 'Waste!A:E',
-    WATER_SHEET: 'Water!A:E', 
-    CLEANING_SHEET: 'Cleaning!A:E',
+    WASTE_SHEET: 'Waste!A:F',
+    WATER_SHEET: 'Water!A:F', 
+    CLEANING_SHEET: 'Cleaning!A:F',
     REWARDS_SHEET: 'Rewards!A:F',
     REWARDS: {
         WASTE_POINTS: 5,
@@ -85,7 +85,7 @@ async function sendEmail(templateParams) {
     }
 }
 
-async function sendWasteUpdateEmail(person, date) {
+async function sendWasteUpdateEmail(person, date, description = '') {
     // Debug log to check authentication state
     console.log('Current auth state:', {
         googleUser: googleUser,
@@ -116,12 +116,13 @@ async function sendWasteUpdateEmail(person, date) {
         icon: '🗑️',
         bg_color: '#ffebee',
         editor_email: editorEmail,
-        update_info: `This update was made by: ${editorEmail}`
+        update_info: `This update was made by: ${editorEmail}`,
+        notes: description ? `Notes: ${description}` : ''
     };
    return await sendEmail(templateParams);
 }
 
-async function sendWaterUpdateEmail(person1, person2, date) {
+async function sendWaterUpdateEmail(person1, person2, date, description = '') {
     const editorEmail = googleUser ? googleUser.email : 'Unknown editor';
     const templateParams = {
         title: 'Water Bottle Trip Update',
@@ -131,12 +132,13 @@ async function sendWaterUpdateEmail(person1, person2, date) {
         icon: '💧',
         bg_color: '#e3f2fd',
         editor_email: editorEmail,
-        update_info: `This update was made by: ${editorEmail}`
+        update_info: `This update was made by: ${editorEmail}`,
+        notes: description ? `Notes: ${description}` : ''
     };
     return await sendEmail(templateParams);
 }
 
-async function sendCleaningUpdateEmail(person, location, date) {
+async function sendCleaningUpdateEmail(person, location, date, description = '') {
     const editorEmail = googleUser ? googleUser.email : 'Unknown editor';
     const templateParams = {
         title: 'Cleaning Update',
@@ -146,7 +148,8 @@ async function sendCleaningUpdateEmail(person, location, date) {
         icon: '🧹',
         bg_color: '#f5f5f5',
         editor_email: editorEmail,
-        update_info: `This update was made by: ${editorEmail}`
+        update_info: `This update was made by: ${editorEmail}`,
+        notes: description ? `Notes: ${description}` : ''
     };
     return await sendEmail(templateParams);
 }
@@ -986,6 +989,7 @@ function processWaterSheetData(values) {
                 time: row[1] ? row[1].trim() : '',
                 person1: row[2].trim(),
                 person2: row[3].trim(),
+                description: row[4] ? row[4].trim() : '',
                 id: index + 1
             });
         }
@@ -1013,6 +1017,7 @@ function processCleaningSheetData(values) {
                 time: row[1] ? row[1].trim() : '',
                 person: row[2].trim(),
                 location: row[3].trim(),
+                description: row[4] ? row[4].trim() : '',
                 id: index + 1
             });
         }
@@ -1116,6 +1121,7 @@ function createWaterTripCard(trip, isLatest) {
             </div>
         </div>
         <div class="water-trip-time">${trip.time || 'Time not specified'}</div>
+        ${trip.description ? `<div class="water-trip-description"><strong>Notes:</strong> ${trip.description}</div>` : ''}
     `;
 
     return card;
@@ -1244,6 +1250,7 @@ function createCleaningHistoryCard(session, isLatest) {
             </div>
         </div>
         <div class="cleaning-history-time">${session.time || 'Time not specified'}</div>
+        ${session.description ? `<div class="cleaning-history-description"><strong>Notes:</strong> ${session.description}</div>` : ''}
     `;
 
     return card;
@@ -1590,6 +1597,7 @@ function closeUpdateModal() {
     
     // Reset form
     document.getElementById('wasteDate').value = '';
+    document.getElementById('wasteDescription').value = '';
 }
 
 // Water Bottle Modal Functions
@@ -1620,6 +1628,7 @@ function closeWaterModal() {
     document.getElementById('waterDate').value = '';
     document.getElementById('person1').value = '';
     document.getElementById('person2').value = '';
+    document.getElementById('waterDescription').value = '';
 }
 
 // Cleaning Modal Functions
@@ -1650,6 +1659,7 @@ function closeCleaningModal() {
     document.getElementById('cleaningDate').value = '';
     document.getElementById('cleaningPerson').value = '';
     document.getElementById('cleaningLocation').value = '';
+    document.getElementById('cleaningDescription').value = '';
 }
 
 // Event listeners
@@ -1736,6 +1746,7 @@ function getDeviceDetails() {
 
 async function handleUpdate() {
     const dateInput = document.getElementById('wasteDate');
+    const descriptionInput = document.getElementById('wasteDescription');
     
     if (!dateInput.value) {
         showError('Please select a date.');
@@ -1751,6 +1762,7 @@ async function handleUpdate() {
         showLoading(true);
         
         const formattedDate = formatDateForSheet(dateInput.value);
+        const description = descriptionInput.value.trim();
         
         // Update local data
         const personData = roommateData[currentUpdatingPerson];
@@ -1762,10 +1774,10 @@ async function handleUpdate() {
         await updateRewardsSheet(currentUpdatingPerson, 'waste', CONFIG.REWARDS.WASTE_POINTS, formattedDate);
         
         // Update the Google Sheet
-        await updateGoogleSheet(currentUpdatingPerson, formattedDate);
+        await updateGoogleSheet(currentUpdatingPerson, formattedDate, description);
         
         // Send email notification
-        const emailSent = await sendWasteUpdateEmail(currentUpdatingPerson, formattedDate);
+        const emailSent = await sendWasteUpdateEmail(currentUpdatingPerson, formattedDate, description);
         if (!emailSent) {
             console.warn('Failed to send email notification');
         }
@@ -1773,7 +1785,10 @@ async function handleUpdate() {
         // Log the action to the Logger sheet
         const deviceDetails = getDeviceDetails();
         console.log('Logging action for device:', deviceDetails);
-        await logUserActionToSheet(deviceDetails, `Updated waste date for ${currentUpdatingPerson} to ${formattedDate}`);
+        const logMessage = description ? 
+            `Updated waste date for ${currentUpdatingPerson} to ${formattedDate}. Notes: ${description}` :
+            `Updated waste date for ${currentUpdatingPerson} to ${formattedDate}`;
+        await logUserActionToSheet(deviceDetails, logMessage);
         
         // Refresh UI
         renderRoommateCards();
@@ -1791,7 +1806,7 @@ async function handleUpdate() {
     }
 }
 
-async function updateGoogleSheet(roommateName, dateValue) {
+async function updateGoogleSheet(roommateName, dateValue, description = '') {
     if (!isSignedIn) {
         window.alert("Please sign in to update");
         throw new Error('Please sign in to add entries');
@@ -1815,11 +1830,12 @@ async function updateGoogleSheet(roommateName, dateValue) {
         const data = await response.json();
         const nextRow = data.values ? data.values.length + 1 : 2;
         
-        // Create the row data
+        // Create the row data - extend to include description column
         const roommateIndex = CONFIG.ROOMMATES.indexOf(roommateName);
-        const rowData = new Array(CONFIG.ROOMMATES.length + 1).fill('');
+        const rowData = new Array(CONFIG.ROOMMATES.length + 2).fill(''); // +2 for row number and description
         rowData[0] = nextRow - 1; // Row number
         rowData[roommateIndex + 1] = dateValue;
+        rowData[CONFIG.ROOMMATES.length + 1] = description; // Description in last column
         
         // Append the row
         const appendResponse = await fetch(
@@ -1840,14 +1856,14 @@ async function updateGoogleSheet(roommateName, dateValue) {
             throw new Error(`Failed to update sheet: ${appendResponse.status}`);
         }
         
-        console.log(`Successfully updated ${roommateName} in Google Sheets`);
+        console.log(`Successfully updated ${roommateName} in Google Sheets with description: ${description}`);
     } catch (error) {
         console.error('Error updating Google Sheet:', error);
         throw error;
     }
 }
 
-async function updateWaterSheet(dateValue, timeValue, person1, person2) {
+async function updateWaterSheet(dateValue, timeValue, person1, person2, description = '') {
     if (!isSignedIn) {
         window.alert("Please sign in to update");
         throw new Error('Please sign in to add entries');
@@ -1859,7 +1875,7 @@ async function updateWaterSheet(dateValue, timeValue, person1, person2) {
             throw new Error('No authentication token available');
         }
         
-        const rowData = [dateValue, timeValue || '', person1, person2];
+        const rowData = [dateValue, timeValue || '', person1, person2, description];
         
         const response = await fetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${CONFIG.WATER_SHEET}:append?valueInputOption=USER_ENTERED&access_token=${authToken}`,
@@ -1879,14 +1895,14 @@ async function updateWaterSheet(dateValue, timeValue, person1, person2) {
             throw new Error(`Failed to update water sheet: ${response.status}`);
         }
         
-        console.log(`Successfully added water trip to Google Sheets`);
+        console.log(`Successfully added water trip to Google Sheets with description: ${description}`);
     } catch (error) {
         console.error('Error updating water sheet:', error);
         throw error;
     }
 }
 
-async function updateCleaningSheet(dateValue, timeValue, person, location) {
+async function updateCleaningSheet(dateValue, timeValue, person, location, description = '') {
     if (!isSignedIn) {
         window.alert("Please sign in to update");
         throw new Error('Please sign in to add entries');
@@ -1898,7 +1914,7 @@ async function updateCleaningSheet(dateValue, timeValue, person, location) {
             throw new Error('No authentication token available');
         }
         
-        const rowData = [dateValue, timeValue || '', person, location];
+        const rowData = [dateValue, timeValue || '', person, location, description];
         
         const response = await fetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SPREADSHEET_ID}/values/${CONFIG.CLEANING_SHEET}:append?valueInputOption=USER_ENTERED&access_token=${authToken}`,
@@ -1918,7 +1934,7 @@ async function updateCleaningSheet(dateValue, timeValue, person, location) {
             throw new Error(`Failed to update cleaning sheet: ${response.status}`);
         }
         
-        console.log(`Successfully added cleaning session to Google Sheets`);
+        console.log(`Successfully added cleaning session to Google Sheets with description: ${description}`);
     } catch (error) {
         console.error('Error updating cleaning sheet:', error);
         throw error;
@@ -2049,6 +2065,7 @@ async function handleWaterUpdate() {
     const dateInput = document.getElementById('waterDate');
     const person1Select = document.getElementById('person1');
     const person2Select = document.getElementById('person2');
+    const descriptionInput = document.getElementById('waterDescription');
     
     if (!dateInput.value) {
         showError('Please select a date.');
@@ -2069,6 +2086,7 @@ async function handleWaterUpdate() {
         showLoading(true);
         
         const formattedDate = formatDateForSheet(dateInput.value);
+        const description = descriptionInput.value.trim();
         const newTrip = {
             date: formattedDate.split(' ')[0], // Just the date part
             person1: person1Select.value,
@@ -2086,10 +2104,10 @@ async function handleWaterUpdate() {
         waterTripData.push(newTrip);
         
         // Update the Google Sheet
-        await updateWaterSheet(newTrip.date, newTrip.time, newTrip.person1, newTrip.person2);
+        await updateWaterSheet(newTrip.date, newTrip.time, newTrip.person1, newTrip.person2, description);
 
         // Send email notification
-        const emailSent = await sendWaterUpdateEmail(newTrip.person1, newTrip.person2, newTrip.date);
+        const emailSent = await sendWaterUpdateEmail(newTrip.person1, newTrip.person2, newTrip.date, description);
         if (!emailSent) {
             console.warn('Failed to send email notification');
         }
@@ -2097,7 +2115,10 @@ async function handleWaterUpdate() {
         const deviceDetails = getDeviceDetails();
         console.log('Logging action for device:', deviceDetails);
         // Log the action to the Logger sheet
-        await logUserActionToSheet(deviceDetails, `Added water trip: ${newTrip.person1} & ${newTrip.person2} on ${newTrip.date}`);
+        const logMessage = description ? 
+            `Added water trip: ${newTrip.person1} & ${newTrip.person2} on ${newTrip.date}. Notes: ${description}` :
+            `Added water trip: ${newTrip.person1} & ${newTrip.person2} on ${newTrip.date}`;
+        await logUserActionToSheet(deviceDetails, logMessage);
         
         // Refresh UI
         renderWaterTrips();
@@ -2121,6 +2142,7 @@ async function handleCleaningUpdate() {
     const dateInput = document.getElementById('cleaningDate');
     const personSelect = document.getElementById('cleaningPerson');
     const locationSelect = document.getElementById('cleaningLocation');
+    const descriptionInput = document.getElementById('cleaningDescription');
     
     if (!dateInput.value) {
         showError('Please select a date.');
@@ -2141,6 +2163,7 @@ async function handleCleaningUpdate() {
         showLoading(true);
         
         const formattedDate = formatDateForSheet(dateInput.value);
+        const description = descriptionInput.value.trim();
         const newSession = {
             date: formattedDate.split(' ')[0], // Just the date part
             person: personSelect.value,
@@ -2155,10 +2178,10 @@ async function handleCleaningUpdate() {
         cleaningData.push(newSession);
         
         // Update the Google Sheet
-        await updateCleaningSheet(newSession.date, newSession.time, newSession.person, newSession.location);
+        await updateCleaningSheet(newSession.date, newSession.time, newSession.person, newSession.location, description);
 
         // Send email notification
-        const emailSent = await sendCleaningUpdateEmail(newSession.person, newSession.location, newSession.date);
+        const emailSent = await sendCleaningUpdateEmail(newSession.person, newSession.location, newSession.date, description);
         if (!emailSent) {
             console.warn('Failed to send email notification');
         }
@@ -2166,7 +2189,10 @@ async function handleCleaningUpdate() {
         const deviceDetails = getDeviceDetails();
         console.log('Logging action for device:', deviceDetails);
         // Log the action to the Logger sheet
-        await logUserActionToSheet(deviceDetails, `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}`);
+        const logMessage = description ? 
+            `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}. Notes: ${description}` :
+            `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}`;
+        await logUserActionToSheet(deviceDetails, logMessage);
         
         // Refresh UI
         renderCleaningHistory();
