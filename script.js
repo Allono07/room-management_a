@@ -224,7 +224,7 @@ async function updateRewardsSheet(person, activity, points, date) {
         }
 
         console.log(`Successfully added reward points for ${person}`);
-        await loadRewardsData();
+        // Note: Don't reload rewards data here to avoid race conditions when called multiple times
     } catch (error) {
         console.error('Error updating rewards:', error);
         throw error;
@@ -1773,6 +1773,10 @@ async function handleUpdate() {
         // Add reward points
         await updateRewardsSheet(currentUpdatingPerson, 'waste', CONFIG.REWARDS.WASTE_POINTS, formattedDate);
         
+        // Reload and update rewards display
+        await loadRewardsData();
+        updateRewardsDisplay();
+        
         // Update the Google Sheet
         await updateGoogleSheet(currentUpdatingPerson, formattedDate, description);
         
@@ -2094,11 +2098,15 @@ async function handleWaterUpdate() {
             id: Date.now() // Simple ID generation
         };
 
-        // Add reward points for both participants
-        await Promise.all([
-            updateRewardsSheet(person1Select.value, 'water', CONFIG.REWARDS.WATER_POINTS, formattedDate),
-            updateRewardsSheet(person2Select.value, 'water', CONFIG.REWARDS.WATER_POINTS, formattedDate)
-        ]);
+        // Add reward points for both participants (sequential to avoid race conditions)
+        console.log(`Adding rewards for ${person1Select.value} and ${person2Select.value}`);
+        await updateRewardsSheet(person1Select.value, 'water', CONFIG.REWARDS.WATER_POINTS, formattedDate);
+        await updateRewardsSheet(person2Select.value, 'water', CONFIG.REWARDS.WATER_POINTS, formattedDate);
+        console.log('Both reward updates completed');
+        
+        // Reload rewards data after both updates
+        await loadRewardsData();
+        updateRewardsDisplay();
         
         // Add to water trip data
         waterTripData.push(newTrip);
@@ -2173,6 +2181,10 @@ async function handleCleaningUpdate() {
 
         // Add reward points
         await updateRewardsSheet(personSelect.value, 'cleaning', CONFIG.REWARDS.CLEANING_POINTS, formattedDate);
+        
+        // Reload and update rewards display
+        await loadRewardsData();
+        updateRewardsDisplay();
         
         // Add to cleaning data
         cleaningData.push(newSession);
