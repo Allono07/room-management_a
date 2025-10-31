@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://accounts.google.com https://www.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' https://sheets.googleapis.com https://accounts.google.com https://people.googleapis.com https://api.emailjs.com;">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://accounts.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' https://sheets.googleapis.com https://accounts.google.com https://people.googleapis.com https://api.emailjs.com;">
     <title>Roommate Waste Tracker</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://accounts.google.com/gsi/client" async></script>
@@ -31,6 +31,8 @@
                     <div class="reward-icon">🍛</div>
                     <div class="reward-label">This Month's Reward</div>
                     <div class="reward-value">MANDHI</div>
+                    <!-- Current month winner placeholder (will be populated dynamically) -->
+                    <div id="currentMonthWinnerDisplay" class="current-month-winner-display" aria-live="polite"></div>
                 </div>
                 <div class="current-rankings">
                     <h2>🏆 Current Month Rankings</h2>
@@ -243,6 +245,15 @@
             <p>Loading data...</p>
         </div>
     </div>
+    <!-- Fireworks overlay for celebration (canvas for fireworks-js) -->
+    <div id="fireworks-container" class="fireworks hidden" aria-hidden="true"></div>
+
+    <!-- Commentary audio (replace assets/commentary.mp3 with your file) -->
+    <audio id="commentaryAudio" src="assets/commentary.mp3" preload="auto"></audio>
+    <button id="playCommentaryBtn" class="play-commentary hidden" aria-label="Play commentary">▶ Play commentary</button>
+    <button id="toggleFireworksBtn" class="fireworks-toggle hidden" aria-pressed="false">🎆 Fireworks</button>
+    <!-- Fireworks JS (CDN) - trying UNPKG for better compatibility -->
+    <script src="https://unpkg.com/fireworks-js@2.x/dist/index.umd.js"></script>
     <script src="script.js"></script>
     <!-- <script>
       // Dynamically load env vars from serverless function

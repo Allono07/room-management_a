@@ -336,6 +336,17 @@ function updateRewardsDisplay() {
     } else {
         winnerDisplay.innerHTML = '<p>No winner yet</p>';
     }
+
+    // If we have a current month top-ranked person, show them as the current-month winner
+    const top = currentMonthRankings && currentMonthRankings.length ? currentMonthRankings[0] : null;
+    if (top && top.points > 0) {
+        // Build an image filename from the name (lowercase) - e.g., 'JITHU' -> 'assets/jithu.jpeg'
+        const imageName = `assets/${top.name.toLowerCase()}.jpeg`;
+        // Use month/year display inferred from current date
+        const now = new Date();
+        const monthYear = now.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+        showMonthlyWinner(top.name, imageName, monthYear);
+    }
 }
 
 async function initializeApp() {
@@ -2229,4 +2240,185 @@ async function handleCleaningUpdate() {
 window.openUpdateModal = openUpdateModal;
 window.openWaterUpdateModal = openWaterUpdateModal;
 window.openCleaningUpdateModal = openCleaningUpdateModal;
+
+// Display monthly winner with photo and trigger fireworks + commentary
+function showMonthlyWinner(name = 'JITHU', imageUrl = 'assets/jithu.jpg', monthYear = 'October 2025') {
+    try {
+        const container = document.getElementById('currentMonthWinnerDisplay');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="winner-frame">
+                <img src="${imageUrl}" alt="${name}" class="winner-photo" onerror="this.style.opacity=0.6;this.src='https://via.placeholder.com/140?text=Photo'" />
+                <div class="winner-caption">Winner of ${monthYear}: <strong>${name}</strong></div>
+            </div>
+        `;
+
+        // Trigger continuous fireworks animation
+        startFireworks();
+
+        // Play commentary audio if available
+        const audio = document.getElementById('commentaryAudio');
+        const playBtn = document.getElementById('playCommentaryBtn');
+        if (audio) {
+            audio.volume = 0.9;
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    // playing
+                    if (playBtn) playBtn.classList.add('hidden');
+                }).catch((err) => {
+                    // Autoplay blocked - show play button
+                    if (playBtn) {
+                        playBtn.classList.remove('hidden');
+                        playBtn.onclick = () => {
+                            audio.play();
+                            playBtn.classList.add('hidden');
+                        };
+                    }
+                    console.warn('Autoplay for commentary blocked:', err);
+                });
+            }
+        }
+    } catch (err) {
+        console.error('Failed to show monthly winner:', err);
+    }
+}
+
+// Expose globally
+window.showMonthlyWinner = showMonthlyWinner;
+
+// Try to show winner on page load (slight delay to ensure DOM ready)
+window.addEventListener('load', () => {
+    // Show winner by default for October 2025 (replace image in assets/ to reflect actual photo)
+    setTimeout(() => {
+        // Use the actual asset filename (jpeg)
+        showMonthlyWinner('JITHU', 'assets/jithu.jpeg', 'October 2025');
+    }, 700);
+});
+
+// Fireworks control functions - start/stop continuous fireworks
+// Fireworks-js integration (CDN) - create/destroy a Fireworks instance for visible celebration
+let fireworksInstance = null;
+let fireworksRunning = false;
+
+function startFireworks() {
+    try {
+        const container = document.getElementById('fireworks-container');
+        const toggleBtn = document.getElementById('toggleFireworksBtn');
+        
+        if (!container) {
+            console.error('Fireworks container not found!');
+            return;
+        }
+
+        console.log('Starting fireworks...');
+        console.log('Fireworks global available?', typeof Fireworks !== 'undefined');
+        console.log('Window.Fireworks:', window.Fireworks);
+        
+        // Reveal the container first
+        container.classList.remove('hidden');
+        container.style.display = 'block';
+
+        // Check if fireworks-js library is available
+        const hasLibrary = typeof Fireworks !== 'undefined' || typeof window.Fireworks !== 'undefined';
+        
+        if (hasLibrary && !fireworksInstance) {
+            console.log('Creating fireworks instance with library');
+            
+            // High-visibility options tuned for celebration
+            const options = {
+                autoresize: true,
+                opacity: 0.9,
+                acceleration: 1.05,
+                friction: 0.95,
+                gravity: 1.2,
+                particles: 150,
+                traceLength: 3,
+                traceSpeed: 10,
+                explosion: 7,
+                intensity: 60,
+                flickering: 50,
+                lineStyle: 'round',
+                brightness: {
+                    min: 50,
+                    max: 80
+                },
+                delay: {
+                    min: 15,
+                    max: 40
+                },
+                boundaries: {
+                    visible: false
+                },
+                sound: {
+                    enabled: false
+                },
+                mouse: {
+                    click: false,
+                    move: false,
+                    max: 0
+                }
+            };
+
+            try {
+                const FireworksConstructor = window.Fireworks || Fireworks;
+                fireworksInstance = new FireworksConstructor(container, options);
+                console.log('Fireworks instance created successfully');
+            } catch (err) {
+                console.error('Error creating fireworks instance:', err);
+                // Add CSS fallback
+                container.classList.add('css-fireworks-active');
+            }
+        } else if (!hasLibrary) {
+            console.warn('Fireworks library not available - using CSS fallback');
+            // Add CSS fallback animation
+            container.classList.add('css-fireworks-active');
+        }
+
+        if (fireworksInstance) {
+            fireworksInstance.start();
+            fireworksRunning = true;
+            console.log('Fireworks started!');
+        } else {
+            fireworksRunning = true;
+            console.log('CSS fallback fireworks active');
+        }
+
+        // Note: Toggle button hidden by CSS - fireworks run continuously
+    } catch (err) {
+        console.error('Failed to start fireworks:', err);
+    }
+}
+
+function stopFireworks() {
+    try {
+        const container = document.getElementById('fireworks-container');
+        
+        console.log('Stopping fireworks...');
+
+        if (fireworksInstance) {
+            try {
+                fireworksInstance.stop();
+                console.log('Fireworks stopped');
+            } catch (err) {
+                console.warn('Error while stopping fireworks instance:', err);
+            }
+        }
+
+        // Remove CSS fallback and hide container
+        if (container) {
+            container.classList.remove('css-fireworks-active');
+            container.classList.add('hidden');
+            container.style.display = 'none';
+        }
+        fireworksRunning = false;
+    } catch (err) {
+        console.error('Failed to stop fireworks:', err);
+    }
+}
+
+// Expose fireworks controls globally
+window.startFireworks = startFireworks;
+window.stopFireworks = stopFireworks;
 
