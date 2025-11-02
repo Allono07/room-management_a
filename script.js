@@ -26,7 +26,7 @@ const CONFIG = {
         SERVICE_ID: 'service_z7ejjbn',
         TEMPLATE_ID: 'template_n885wa8',
         PUBLIC_KEY: 'noyxT_Bu6ph2s9LL8', // Replace with your public key from EmailJS dashboard
-        TO_EMAILS: ['jithuv01@gmail.com', 'allen.thomson@mscsa.christuniversity.in','greeenvr@gmail.com','rtdebin@gmail.com']
+        TO_EMAILS: ['allen.thomson@mscsa.christuniversity.in']
     }
 };
 
@@ -157,6 +157,39 @@ async function sendCleaningUpdateEmail(person, location, date, description = '')
         update_info: `This update was made by: ${editorEmail}`,
         notes: description ? `Notes: ${description}` : ''
     };
+    return await sendEmail(templateParams);
+}
+
+async function sendBulkUpdateEmail(updates, date, description = '') {
+    const editorEmail = googleUser ? googleUser.email : 'Unknown editor';
+    
+    // Build summary message
+    let summaryLines = [];
+    
+    updates.forEach(update => {
+        if (update.type === 'waste') {
+            summaryLines.push(`🗑️ ${update.person} - Waste disposal`);
+        } else if (update.type === 'water') {
+            summaryLines.push(`💧 ${update.person1} & ${update.person2} - Water bottle trip`);
+        } else if (update.type === 'cleaning') {
+            summaryLines.push(`🧹 ${update.person} - Cleaned ${update.displayLocation || update.location}`);
+        }
+    });
+    
+    const summaryMessage = summaryLines.join('\n');
+    
+    const templateParams = {
+        title: 'Bulk Update Summary',
+        date: date,
+        action_type: 'bulk update',
+        message: `${updates.length} task${updates.length > 1 ? 's' : ''} added:\n\n${summaryMessage}`,
+        icon: '⚡',
+        bg_color: '#fff3e0',
+        editor_email: editorEmail,
+        update_info: `This bulk update was made by: ${editorEmail}`,
+        notes: description ? `Notes: ${description}` : ''
+    };
+    
     return await sendEmail(templateParams);
 }
 
@@ -1706,6 +1739,14 @@ function setupEventListeners() {
     
     cleaningCloseBtn.onclick = closeCleaningModal;
     
+    // Bulk update modal close events
+    const bulkModal = document.getElementById('bulkUpdateModal');
+    const bulkCloseBtn = document.querySelector('.close-bulk');
+    
+    if (bulkCloseBtn) {
+        bulkCloseBtn.onclick = closeBulkUpdateModal;
+    }
+    
     window.onclick = function(event) {
         if (event.target === modal) {
             closeUpdateModal();
@@ -1716,12 +1757,21 @@ function setupEventListeners() {
         if (event.target === cleaningModal) {
             closeCleaningModal();
         }
+        if (event.target === bulkModal) {
+            closeBulkUpdateModal();
+        }
     };
     
     // Update buttons
     document.getElementById('updateBtn').addEventListener('click', handleUpdate);
     document.getElementById('waterUpdateBtn').addEventListener('click', handleWaterUpdate);
     document.getElementById('cleaningUpdateBtn').addEventListener('click', handleCleaningUpdate);
+    
+    // Bulk submit button
+    const bulkSubmitBtn = document.getElementById('bulkSubmitBtn');
+    if (bulkSubmitBtn) {
+        bulkSubmitBtn.addEventListener('click', handleBulkSubmit);
+    }
     
     // Show/hide table count when location changes
     const cleaningLocation = document.getElementById('cleaningLocation');
@@ -2294,6 +2344,294 @@ async function handleCleaningUpdate() {
 window.openUpdateModal = openUpdateModal;
 window.openWaterUpdateModal = openWaterUpdateModal;
 window.openCleaningUpdateModal = openCleaningUpdateModal;
+
+// Bulk Update Functions
+let waterTripCounter = 0;
+let cleaningCounter = 0;
+
+function openBulkUpdateModal() {
+    if (!isSignedIn) {
+        showError('Please sign in to add bulk updates');
+        window.alert("Please sign in to update");
+        return;
+    }
+    
+    const modal = document.getElementById('bulkUpdateModal');
+    const dateInput = document.getElementById('bulkDate');
+    
+    // Set today's date as default
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = today;
+    
+    // Reset counters and containers
+    waterTripCounter = 0;
+    cleaningCounter = 0;
+    document.getElementById('waterTripsContainer').innerHTML = '';
+    document.getElementById('cleaningSessionsContainer').innerHTML = '';
+    
+    // Uncheck all waste checkboxes
+    document.querySelectorAll('input[name="waste"]').forEach(cb => cb.checked = false);
+    
+    modal.style.display = 'block';
+    dateInput.focus();
+}
+
+function closeBulkUpdateModal() {
+    const modal = document.getElementById('bulkUpdateModal');
+    modal.style.display = 'none';
+    document.getElementById('bulkDescription').value = '';
+}
+
+function addWaterTripRow() {
+    waterTripCounter++;
+    const container = document.getElementById('waterTripsContainer');
+    const rowId = `water-trip-${waterTripCounter}`;
+    
+    const rowHtml = `
+        <div class="bulk-row" id="${rowId}">
+            <select class="water-person1" required>
+                <option value="">Person 1</option>
+                <option value="ALLEN">ALLEN</option>
+                <option value="DEBIN">DEBIN</option>
+                <option value="GREEN">GREEN</option>
+                <option value="JITHU">JITHU</option>
+            </select>
+            <select class="water-person2" required>
+                <option value="">Person 2</option>
+                <option value="ALLEN">ALLEN</option>
+                <option value="DEBIN">DEBIN</option>
+                <option value="GREEN">GREEN</option>
+                <option value="JITHU">JITHU</option>
+            </select>
+            <button type="button" onclick="removeRow('${rowId}')">✕ Remove</button>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', rowHtml);
+}
+
+function addCleaningRow() {
+    cleaningCounter++;
+    const container = document.getElementById('cleaningSessionsContainer');
+    const rowId = `cleaning-${cleaningCounter}`;
+    
+    const rowHtml = `
+        <div class="bulk-row" id="${rowId}">
+            <select class="cleaning-person" required>
+                <option value="">Person</option>
+                <option value="ALLEN">ALLEN</option>
+                <option value="DEBIN">DEBIN</option>
+                <option value="GREEN">GREEN</option>
+                <option value="JITHU">JITHU</option>
+            </select>
+            <select class="cleaning-location" required onchange="toggleTableCount(this, '${rowId}')">
+                <option value="">Location</option>
+                <option value="kitchen-broom">Kitchen - Broom</option>
+                <option value="kitchen-mop">Kitchen - Broom + Mop</option>
+                <option value="hall-broom">Hall - Broom</option>
+                <option value="hall-mop">Hall - Broom + Mop</option>
+                <option value="table">Table cleaning</option>
+            </select>
+            <button type="button" onclick="removeRow('${rowId}')">✕ Remove</button>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', rowHtml);
+}
+
+function toggleTableCount(selectElement, rowId) {
+    const row = document.getElementById(rowId);
+    const existingTableSelect = row.querySelector('.table-count-select');
+    
+    if (selectElement.value === 'table' && !existingTableSelect) {
+        // Add table count dropdown
+        const tableSelectHtml = `
+            <select class="table-count-select">
+                <option value="1">1 Table (5 pts)</option>
+                <option value="2">2 Tables (10 pts)</option>
+                <option value="3">3 Tables (15 pts)</option>
+            </select>
+        `;
+        selectElement.insertAdjacentHTML('afterend', tableSelectHtml);
+    } else if (selectElement.value !== 'table' && existingTableSelect) {
+        // Remove table count dropdown
+        existingTableSelect.remove();
+    }
+}
+
+function removeRow(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) {
+        row.remove();
+    }
+}
+
+async function handleBulkSubmit() {
+    const dateInput = document.getElementById('bulkDate');
+    
+    if (!dateInput.value) {
+        showError('Please select a date.');
+        return;
+    }
+    
+    try {
+        showLoading(true);
+        
+        const formattedDate = formatDateForSheet(dateInput.value);
+        const generalNotes = document.getElementById('bulkDescription').value.trim();
+        
+        let updatesCount = 0;
+        const updates = [];
+        
+        // Collect waste updates
+        const wasteCheckboxes = document.querySelectorAll('input[name="waste"]:checked');
+        for (const checkbox of wasteCheckboxes) {
+            updates.push({
+                type: 'waste',
+                person: checkbox.value,
+                date: formattedDate
+            });
+            updatesCount++;
+        }
+        
+        // Collect water trip updates
+        const waterRows = document.querySelectorAll('#waterTripsContainer .bulk-row');
+        for (const row of waterRows) {
+            const person1 = row.querySelector('.water-person1').value;
+            const person2 = row.querySelector('.water-person2').value;
+            
+            if (person1 && person2) {
+                if (person1 === person2) {
+                    showError('Water trip: Both persons cannot be the same!');
+                    showLoading(false);
+                    return;
+                }
+                updates.push({
+                    type: 'water',
+                    person1,
+                    person2,
+                    date: formattedDate
+                });
+                updatesCount++;
+            }
+        }
+        
+        // Collect cleaning updates
+        const cleaningRows = document.querySelectorAll('#cleaningSessionsContainer .bulk-row');
+        for (const row of cleaningRows) {
+            const person = row.querySelector('.cleaning-person').value;
+            const location = row.querySelector('.cleaning-location').value;
+            const tableCountSelect = row.querySelector('.table-count-select');
+            const tableCount = tableCountSelect ? parseInt(tableCountSelect.value) : 1;
+            
+            if (person && location) {
+                updates.push({
+                    type: 'cleaning',
+                    person,
+                    location,
+                    tableCount,
+                    date: formattedDate
+                });
+                updatesCount++;
+            }
+        }
+        
+        if (updatesCount === 0) {
+            showError('Please add at least one update!');
+            showLoading(false);
+            return;
+        }
+        
+        // Process all updates
+        for (const update of updates) {
+            if (update.type === 'waste') {
+                await updateGoogleSheet(update.person, update.date, generalNotes);
+                await updateRewardsSheet(update.person, 'waste', CONFIG.REWARDS.WASTE_POINTS, update.date);
+            } else if (update.type === 'water') {
+                await updateWaterSheet(update.date, '', update.person1, update.person2, generalNotes);
+                await updateRewardsSheet(update.person1, 'water', CONFIG.REWARDS.WATER_POINTS, update.date);
+                await updateRewardsSheet(update.person2, 'water', CONFIG.REWARDS.WATER_POINTS, update.date);
+            } else if (update.type === 'cleaning') {
+                let points = CONFIG.REWARDS.CLEANING_POINTS;
+                let displayLocation = update.location;
+                
+                if (update.location === 'table') {
+                    points = CONFIG.REWARDS.TABLE_CLEANING_POINTS * update.tableCount;
+                    displayLocation = `table (${update.tableCount} table${update.tableCount > 1 ? 's' : ''})`;
+                } else if (update.location === 'kitchen-broom') {
+                    points = CONFIG.REWARDS.KITCHEN_BROOM_POINTS;
+                    displayLocation = 'kitchen (broom)';
+                } else if (update.location === 'kitchen-mop') {
+                    points = CONFIG.REWARDS.KITCHEN_MOP_POINTS;
+                    displayLocation = 'kitchen (broom + mop)';
+                } else if (update.location === 'kitchen-desk') {
+                    points = CONFIG.REWARDS.KITCHEN_DESK_POINTS;
+                    displayLocation = 'kitchen (desk)';
+                } else if (update.location === 'hall-broom') {
+                    points = CONFIG.REWARDS.HALL_BROOM_POINTS;
+                    displayLocation = 'hall (broom)';
+                } else if (update.location === 'hall-mop') {
+                    points = CONFIG.REWARDS.HALL_MOP_POINTS;
+                    displayLocation = 'hall (broom + mop)';
+                }
+                
+                // Store display location for email
+                update.displayLocation = displayLocation;
+                
+                await updateCleaningSheet(update.date, '', update.person, displayLocation, generalNotes);
+                await updateRewardsSheet(update.person, `cleaning-${update.location}`, points, update.date);
+            }
+        }
+        
+        // Send single summary email for all bulk updates
+        const emailSent = await sendBulkUpdateEmail(updates, formattedDate, generalNotes);
+        if (!emailSent) {
+            console.warn('Failed to send bulk update email notification');
+        }
+        
+        // Log the bulk action to the Logger sheet
+        const deviceDetails = getDeviceDetails();
+        const logMessage = generalNotes ? 
+            `Bulk update: ${updatesCount} task${updatesCount > 1 ? 's' : ''} added. Notes: ${generalNotes}` :
+            `Bulk update: ${updatesCount} task${updatesCount > 1 ? 's' : ''} added`;
+        await logUserActionToSheet(deviceDetails, logMessage);
+        
+        // Reload data once after all updates
+        await Promise.all([
+            loadDataFromSheets(),
+            loadRewardsData()
+        ]);
+        
+        // Refresh UI
+        renderRoommateCards();
+        renderWaterTrips();
+        renderWaterRoommateCards();
+        renderCleaningHistory();
+        renderCleaningRoommateCards();
+        updateLatestIndicator();
+        updateMostIndicator();
+        updateWaterLatestIndicator();
+        updateWaterMostIndicator();
+        updateCleaningLatestIndicator();
+        updateCleaningMostIndicator();
+        updateRewardsDisplay();
+        
+        closeBulkUpdateModal();
+        showSuccess(`✅ Bulk update successful! ${updatesCount} task${updatesCount > 1 ? 's' : ''} added.`);
+        
+    } catch (error) {
+        console.error('Error in bulk update:', error);
+        showError('Failed to complete bulk update. Please try again.');
+    } finally {
+        showLoading(false);
+    }
+}
+
+window.openBulkUpdateModal = openBulkUpdateModal;
+window.addWaterTripRow = addWaterTripRow;
+window.addCleaningRow = addCleaningRow;
+window.removeRow = removeRow;
+window.toggleTableCount = toggleTableCount;
 
 // Display monthly winner with photo and trigger fireworks + commentary
 function showMonthlyWinner(name = 'JITHU', imageUrl = 'assets/jithu.jpg', monthYear = 'October 2025') {

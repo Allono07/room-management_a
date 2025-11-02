@@ -53,7 +53,6 @@
                         <li>💧 Water Bottle Trip: 15 points</li>
                         <li>🧹 Kitchen/Hall Broom: 10 points</li>
                         <li>🧽 Kitchen/Hall Broom + Mop: 25 points</li>
-                        <li>🍽️ Kitchen Desk Cleaning: 10 points</li>
                         <li>🪑 Table Cleaning: 5 points per table</li>
                     </ul>
                 </div>
@@ -150,7 +149,57 @@
         <div class="controls auth-controls">
             <div id="g_id_signin" style="margin-bottom: 10px;"></div>
             <button id="authButton" class="btn btn-signin">🔑 Sign In with Google</button>
+            <button id="bulkUpdateBtn" class="btn btn-primary" onclick="openBulkUpdateModal()">⚡ Bulk Update</button>
             <button id="refreshBtn" class="btn btn-secondary">🔄 Refresh Data</button>
+        </div>
+
+        <!-- Bulk Update Modal -->
+        <div id="bulkUpdateModal" class="modal">
+            <div class="modal-content bulk-modal-content">
+                <span class="close-bulk">&times;</span>
+                <h2>⚡ Bulk Update - Add Multiple Tasks</h2>
+                
+                <div class="form-group">
+                    <label for="bulkDate">Date for all entries:</label>
+                    <input type="date" id="bulkDate" max="" required>
+                </div>
+
+                <!-- Waste Section -->
+                <div class="bulk-section">
+                    <h3>🗑️ Waste Disposal (5 points each)</h3>
+                    <div class="checkbox-grid">
+                        <label><input type="checkbox" name="waste" value="ALLEN"> ALLEN</label>
+                        <label><input type="checkbox" name="waste" value="DEBIN"> DEBIN</label>
+                        <label><input type="checkbox" name="waste" value="GREEN"> GREEN</label>
+                        <label><input type="checkbox" name="waste" value="JITHU"> JITHU</label>
+                    </div>
+                </div>
+
+                <!-- Water Trips Section -->
+                <div class="bulk-section">
+                    <h3>💧 Water Bottle Trips (15 points each)</h3>
+                    <div id="waterTripsContainer">
+                        <!-- Water trips will be added here -->
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-small" onclick="addWaterTripRow()">+ Add Water Trip</button>
+                </div>
+
+                <!-- Cleaning Section -->
+                <div class="bulk-section">
+                    <h3>🧹 Cleaning Sessions</h3>
+                    <div id="cleaningSessionsContainer">
+                        <!-- Cleaning sessions will be added here -->
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-small" onclick="addCleaningRow()">+ Add Cleaning</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="bulkDescription">General Notes (optional):</label>
+                    <textarea id="bulkDescription" placeholder="Any general notes for all updates..." rows="2"></textarea>
+                </div>
+
+                <button id="bulkSubmitBtn" class="btn btn-primary btn-large">Submit All Updates</button>
+            </div>
         </div>
 
         <!-- Waste Update Modal -->
@@ -232,7 +281,6 @@
                         <option value="">Select location</option>
                         <option value="kitchen-broom">Kitchen - Broom only</option>
                         <option value="kitchen-mop">Kitchen - Broom + Mop</option>
-                        <option value="kitchen-desk">Kitchen - Desk cleaning</option>
                         <option value="hall-broom">Hall - Broom only</option>
                         <option value="hall-mop">Hall - Broom + Mop</option>
                         <option value="table">Table cleaning</option>
