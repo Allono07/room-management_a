@@ -12,7 +12,8 @@ const CONFIG = {
     REWARDS: {
         WASTE_POINTS: 5,
         WATER_POINTS: 15,
-        CLEANING_POINTS: 10
+        CLEANING_POINTS: 10,
+        TABLE_CLEANING_POINTS: 5  // Per table
     },
     ROOMMATES: ['ALLEN', 'DEBIN', 'GREEN', 'JITHU'],
     // Email configuration
@@ -1671,6 +1672,13 @@ function closeCleaningModal() {
     document.getElementById('cleaningPerson').value = '';
     document.getElementById('cleaningLocation').value = '';
     document.getElementById('cleaningDescription').value = '';
+    document.getElementById('tableCount').value = '1';
+    
+    // Hide table count group
+    const tableCountGroup = document.getElementById('tableCountGroup');
+    if (tableCountGroup) {
+        tableCountGroup.style.display = 'none';
+    }
 }
 
 // Event listeners
@@ -1709,6 +1717,19 @@ function setupEventListeners() {
     document.getElementById('updateBtn').addEventListener('click', handleUpdate);
     document.getElementById('waterUpdateBtn').addEventListener('click', handleWaterUpdate);
     document.getElementById('cleaningUpdateBtn').addEventListener('click', handleCleaningUpdate);
+    
+    // Show/hide table count when location changes
+    const cleaningLocation = document.getElementById('cleaningLocation');
+    const tableCountGroup = document.getElementById('tableCountGroup');
+    if (cleaningLocation && tableCountGroup) {
+        cleaningLocation.addEventListener('change', function() {
+            if (this.value === 'table') {
+                tableCountGroup.style.display = 'block';
+            } else {
+                tableCountGroup.style.display = 'none';
+            }
+        });
+    }
     
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -2162,6 +2183,7 @@ async function handleCleaningUpdate() {
     const personSelect = document.getElementById('cleaningPerson');
     const locationSelect = document.getElementById('cleaningLocation');
     const descriptionInput = document.getElementById('cleaningDescription');
+    const tableCountSelect = document.getElementById('tableCount');
     
     if (!dateInput.value) {
         showError('Please select a date.');
@@ -2183,15 +2205,27 @@ async function handleCleaningUpdate() {
         
         const formattedDate = formatDateForSheet(dateInput.value);
         const description = descriptionInput.value.trim();
+        const location = locationSelect.value;
+        
+        // Calculate points based on location
+        let points = CONFIG.REWARDS.CLEANING_POINTS; // Default 10 points
+        let displayLocation = location;
+        
+        if (location === 'table') {
+            const tableCount = parseInt(tableCountSelect.value) || 1;
+            points = CONFIG.REWARDS.TABLE_CLEANING_POINTS * tableCount; // 5 points per table
+            displayLocation = `table (${tableCount} table${tableCount > 1 ? 's' : ''})`;
+        }
+        
         const newSession = {
             date: formattedDate.split(' ')[0], // Just the date part
             person: personSelect.value,
-            location: locationSelect.value,
+            location: displayLocation,
             id: Date.now() // Simple ID generation
         };
 
         // Add reward points
-        await updateRewardsSheet(personSelect.value, 'cleaning', CONFIG.REWARDS.CLEANING_POINTS, formattedDate);
+        await updateRewardsSheet(personSelect.value, `cleaning-${location}`, points, formattedDate);
         
         // Reload and update rewards display
         await loadRewardsData();
@@ -2213,8 +2247,8 @@ async function handleCleaningUpdate() {
         console.log('Logging action for device:', deviceDetails);
         // Log the action to the Logger sheet
         const logMessage = description ? 
-            `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}. Notes: ${description}` :
-            `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}`;
+            `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}. Notes: ${description}. Points: ${points}` :
+            `Added cleaning session: ${newSession.person} cleaned ${newSession.location} on ${newSession.date}. Points: ${points}`;
         await logUserActionToSheet(deviceDetails, logMessage);
         
         // Refresh UI
@@ -2224,7 +2258,7 @@ async function handleCleaningUpdate() {
         updateCleaningMostIndicator();
         
         closeCleaningModal();
-        showSuccess(`Cleaning session added successfully! ${newSession.person} cleaned ${newSession.location} on ${newSession.date}`);
+        showSuccess(`Cleaning session added successfully! ${newSession.person} cleaned ${newSession.location} on ${newSession.date} (+${points} points)`);
         
     } catch (error) {
         console.error('Error updating cleaning session:', error);
@@ -2254,8 +2288,8 @@ function showMonthlyWinner(name = 'JITHU', imageUrl = 'assets/jithu.jpg', monthY
             </div>
         `;
 
-        // Trigger continuous fireworks animation
-        startFireworks();
+        // Fireworks disabled - commented out
+        // startFireworks();
 
         // Play commentary audio if available
         const audio = document.getElementById('commentaryAudio');

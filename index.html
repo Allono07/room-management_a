@@ -51,7 +51,8 @@
                     <ul>
                         <li>🗑️ Waste Disposal: 5 points</li>
                         <li>💧 Water Bottle Trip: 15 points</li>
-                        <li>🧹 Cleaning: 10 points</li>
+                        <li>🧹 Cleaning (Kitchen/Hall): 10 points</li>
+                        <li>🪑 Table Cleaning: 5 points per table</li>
                     </ul>
                 </div>
             </div>
@@ -229,6 +230,15 @@
                         <option value="">Select location</option>
                         <option value="kitchen">Kitchen</option>
                         <option value="hall">Hall</option>
+                        <option value="table">Table cleaning</option>
+                    </select>
+                </div>
+                <div class="form-group" id="tableCountGroup" style="display: none;">
+                    <label for="tableCount">Number of Tables Cleaned (5 points each):</label>
+                    <select id="tableCount">
+                        <option value="1">1 Table (5 points)</option>
+                        <option value="2">2 Tables (10 points)</option>
+                        <option value="3">3 Tables (15 points)</option>
                     </select>
                 </div>
                 <div class="form-group">
