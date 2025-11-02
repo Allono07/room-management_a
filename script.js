@@ -12,7 +12,12 @@ const CONFIG = {
     REWARDS: {
         WASTE_POINTS: 5,
         WATER_POINTS: 15,
-        CLEANING_POINTS: 10,
+        CLEANING_POINTS: 10,  // Default/legacy
+        KITCHEN_BROOM_POINTS: 10,
+        KITCHEN_MOP_POINTS: 25,
+        KITCHEN_DESK_POINTS: 10,
+        HALL_BROOM_POINTS: 10,
+        HALL_MOP_POINTS: 25,
         TABLE_CLEANING_POINTS: 5  // Per table
     },
     ROOMMATES: ['ALLEN', 'DEBIN', 'GREEN', 'JITHU'],
@@ -2207,7 +2212,7 @@ async function handleCleaningUpdate() {
         const description = descriptionInput.value.trim();
         const location = locationSelect.value;
         
-        // Calculate points based on location
+        // Calculate points based on location and cleaning type
         let points = CONFIG.REWARDS.CLEANING_POINTS; // Default 10 points
         let displayLocation = location;
         
@@ -2215,6 +2220,21 @@ async function handleCleaningUpdate() {
             const tableCount = parseInt(tableCountSelect.value) || 1;
             points = CONFIG.REWARDS.TABLE_CLEANING_POINTS * tableCount; // 5 points per table
             displayLocation = `table (${tableCount} table${tableCount > 1 ? 's' : ''})`;
+        } else if (location === 'kitchen-broom') {
+            points = CONFIG.REWARDS.KITCHEN_BROOM_POINTS; // 10 points
+            displayLocation = 'kitchen (broom)';
+        } else if (location === 'kitchen-mop') {
+            points = CONFIG.REWARDS.KITCHEN_MOP_POINTS; // 25 points
+            displayLocation = 'kitchen (broom + mop)';
+        } else if (location === 'kitchen-desk') {
+            points = CONFIG.REWARDS.KITCHEN_DESK_POINTS; // 10 points
+            displayLocation = 'kitchen (desk)';
+        } else if (location === 'hall-broom') {
+            points = CONFIG.REWARDS.HALL_BROOM_POINTS; // 10 points
+            displayLocation = 'hall (broom)';
+        } else if (location === 'hall-mop') {
+            points = CONFIG.REWARDS.HALL_MOP_POINTS; // 25 points
+            displayLocation = 'hall (broom + mop)';
         }
         
         const newSession = {
