@@ -26,7 +26,7 @@ const CONFIG = {
         SERVICE_ID: 'service_z7ejjbn',
         TEMPLATE_ID: 'template_n885wa8',
         PUBLIC_KEY: 'noyxT_Bu6ph2s9LL8', // Replace with your public key from EmailJS dashboard
-        TO_EMAILS: ['allen.thomson@mscsa.christuniversity.in']
+        TO_EMAILS: ['jithuv01@gmail.com', 'allen.thomson@mscsa.christuniversity.in','greeenvr@gmail.com','rtdebin@gmail.com']
     }
 };
 
@@ -2633,7 +2633,7 @@ window.addCleaningRow = addCleaningRow;
 window.removeRow = removeRow;
 window.toggleTableCount = toggleTableCount;
 
-// Display monthly winner with photo and trigger fireworks + commentary
+// Display monthly winner with photo
 function showMonthlyWinner(name = 'JITHU', imageUrl = 'assets/jithu.jpg', monthYear = 'October 2025') {
     try {
         const container = document.getElementById('currentMonthWinnerDisplay');
@@ -2649,29 +2649,7 @@ function showMonthlyWinner(name = 'JITHU', imageUrl = 'assets/jithu.jpg', monthY
         // Fireworks disabled - commented out
         // startFireworks();
 
-        // Play commentary audio if available
-        const audio = document.getElementById('commentaryAudio');
-        const playBtn = document.getElementById('playCommentaryBtn');
-        if (audio) {
-            audio.volume = 0.9;
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    // playing
-                    if (playBtn) playBtn.classList.add('hidden');
-                }).catch((err) => {
-                    // Autoplay blocked - show play button
-                    if (playBtn) {
-                        playBtn.classList.remove('hidden');
-                        playBtn.onclick = () => {
-                            audio.play();
-                            playBtn.classList.add('hidden');
-                        };
-                    }
-                    console.warn('Autoplay for commentary blocked:', err);
-                });
-            }
-        }
+        // Commentary audio removed
     } catch (err) {
         console.error('Failed to show monthly winner:', err);
     }
